@@ -1,0 +1,912 @@
+
+
+## MVVM-介绍和演示
+
+![MVVM](./assets/mvvm-3510948.png)
+
+>面试过程中,面试官一定会问你 描述一下 你所知道的MVVM?
+>
+>MVVM 在Vue中是用什么来实现的?
+>
+>OK,我们来攻克这个题目
+
+* 首先第一个M,指的是 Model, 也就是**`数据模型`**,其实就是数据, 换到Vue里面,其实指的就是 Vue组件实例中的**`data`**, 但是这个data 我们从一开始就定义了 它叫 **`响应式数据`**
+
+* 第二个V,指的是View, 也就是**`页面视图`**, 换到Vue中也就是 我们的**`template`**转化成的**`DOM对象`**
+
+* 第三个 VM, 指的是**`ViewModel`**,  也就是 视图和数据的管理者, 它管理着我们的数据 到 视图变化的工作,换到Vue中 ,它指的就是我们的当前的**`Vue实例`**,  Model数据 和 View 视图通信的一个**`桥梁`**
+
+- 简单一句话：**`数据驱动视图`**, 数据变化 =>视图更新
+
+```js
+<!-- 视图 -->
+<template>
+  <div>{{ message }}</div>
+</template>
+<script>
+// Model 普通数据对象
+export default {
+  data () {
+    return {
+      message: 'Hello World'
+    }
+  }
+}
+</script>
+
+<style>
+
+</style>
+
+```
+
+
+
+## MVVM-响应式原理-Object.defineProperty()-基本使用
+
+> 接下里,我们来重点研究MVVM的原理及实现方式,Vuejs官网给出了MVVM的原理方式
+
+[Vue文档说明](https://cn.vuejs.org/v2/guide/reactivity.html) 
+
+>通过上面的文档我们可以发现, Vue的响应式原理(MVVM)实际上就是下面这段话:
+>
+>当你把一个普通的 JavaScript 对象传入 Vue 实例作为 `data` 选项，Vue 将遍历此对象所有的属性，并使用 [`Object.defineProperty`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty) 把这些属性全部转为 [getter/setter](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Working_with_Objects#定义_getters_与_setters)。`Object.defineProperty` 是 ES5 中一个无法 shim 的特性，这也就是 Vue 不支持 IE8 以及更低版本浏览器的原因。
+
+从上面的表述中,我们发现了几个关键词, **`Object.defineProperty`**   **`getter/setter`**
+
+> 什么是 Object.defineProperty? 
+
+定义:`Object.defineProperty()` 方法会直接在一个对象上定义一个新属性，或者修改一个对象的现有属性， 并返回这个对象。
+
+>语法:  Object.defineProperty(obj, prop, descriptor)
+
+参数:  **obj**  =>  要在其上定义属性的对象。
+
+​           **prop**  =>  要新增或者修改的属性名
+
+​           **descriptor**  =>  将被定义或修改的属性描述符。
+
+返回值 :    被传递给函数的对象。 也就是 传入的obj对象
+
+>通过上面的笔记 我们来看下 有哪些参数 需要学习
+>
+>obj  就是一个对象  可以 new Object()  也可以  {}
+>
+>prop  就是属性名 也就是一个字符串
+>
+>descriptor 描述符是什么 ?  有哪些属性
+
+对象里目前存在的属性描述符有两种主要形式：**`数据描述符`**和**`存取描述符`**。**`数据描述符`**是一个具有值的属性，该值可能是可写的，也可能不是可写的。**`存取描述符`**是由getter-setter函数对描述的属性。描述符必须是这两种形式之一；**`不能同时是两者`**。
+
+>上面是官方描述 ,它告诉我们 defineProterty设计上有**`两种模式`**存在,一种**`数据描述`**, 一种**`存取描述`**
+>
+>描述符必须是这两个中的一个 ,不能同时是两者, 也就是 **`一山不容二虎`**, 也不能 **`一山两虎都无`**
+
+我们写一个最简单的 **`数据描述符`**的例子
+
+```js
+  var obj = {
+            name: '曹扬'
+        }
+       var o = Object.defineProperty(obj, 'weight', {
+            value: '280kg'
+        })
+        console.log(o)
+```
+
+>接下来进行详细分析
+
+## Object.defineProperty()-`数据描述符`模式
+
+> 数据描述符有哪些属性?
+
+* **`value`** =>该属性对应的值。可以是任何有效的 JavaScript 值（数值，对象，函数等）。默认为 unfined
+* **`writable`** => 当且仅当该属性的writable为true时，value才能被赋值运算符改变。默认为 false。
+
+> 就这两个 ? 还有吗 ?
+
+* **`configurable`**  =>  当且仅当该属性的 configurable 为 true 时，该属性`描述符`才能够被改变，同时该属性也能从对应的对象上被删除。**默认为 false**。
+* **`enumerable`**  => 当且仅当该属性的`enumerable`为`true`时，该属性才能够出现在对象的枚举属性中。**默认为 false**。
+
+>为什么  **`configurable`**  和 **`enumerable`**  不同时 和 value  还有 writable一起写呢 ?
+
+因为这两个属性不但可以在数据描述符里出现 还可以在 存取描述符里出现
+
+>我们通过writeable 和 value属性来写一个 可写的属性 和不写的属性  
+
+```js
+   var obj = {
+          name: '曹扬'
+      }
+     Object.defineProperty(obj, 'money', {
+         value: "10k" // 薪水 此时薪水是不可改的
+     })
+     Object.defineProperty(obj, 'weight', {
+         value: '150斤', // 给一万根头发
+         writable: true
+     })
+     obj.money = '20k'
+     obj.weight = '200斤'
+     console.log(obj)
+```
+
+> 接下来 ,我们希望 去让一个不可变的属性变成可变的
+
+```js
+    var obj = {
+          name: '曹扬'
+      }
+     Object.defineProperty(obj, 'money', {
+         value: '10k', // 薪水 此时薪水是不可改的
+         configurable: true  // 只有这里为true时 才能去改writeable属性
+     })
+     Object.defineProperty(obj, 'weight', {
+         value: '150斤', // 给一万根头发
+         writable: true
+     })
+     obj.money = "20k"
+     obj.weight = '200斤'
+     console.log(obj)
+     Object.defineProperty(obj, 'money', {
+         writable: true 
+     })
+     obj.money = '20k'
+     console.log(obj)
+```
+
+> 接下来,我们希望可以在遍历的时候 遍历到新添加的两个属性
+
+```js
+      var obj = {
+          name: '曹扬'
+      }
+     Object.defineProperty(obj, 'money', {
+         value: '10k', // 薪水 此时薪水是不可改的
+         configurable: true,
+         enumerable: true
+     })
+     Object.defineProperty(obj, 'weight', {
+         value: '150斤', // 给一万根头发
+         writable: true,
+         enumerable: true
+
+     })
+     obj.money = "20k"
+     obj.weight = '200斤'
+     console.log(obj)
+     Object.defineProperty(obj, 'money', {
+         writable: true 
+     })
+     obj.money = '20k'
+     console.log(obj)
+     for(var item in obj) {
+         console.log(item)
+     }
+```
+
+## Object.defineProperty()-`存取描述符`模式
+
+> 上一小节中,数据描述符 独有的属性 是 value  和 writable , 这也就意味着, 在存取描述模式中
+>
+> value 和 writable属性不能出现
+>
+> 那么 存储描述符有啥属性 ?
+
+* **`get`**  一个给属性提供 getter 的方法，如果没有 getter 则为 `undefined`。当访问该属性时，该方法会被执行，方法执行时没有参数传入，但是会传入`this`对象（由于继承关系，这里的`this`并不一定是定义该属性的对象）。
+* **`set`**  一个给属性提供 setter 的方法，如果没有 setter 则为 `undefined`。当属性值修改时，触发执行该方法。该方法将接受唯一参数，即该属性新的参数值。
+
+>get/set  其实就是我们最常见的 读取值 和设置值得方法   this.name 读取值 this.name = '张三'
+>
+>读取值得时候 调用 get方法 
+>
+>设置值得时候调用 set方法
+
+我们做一个 可以 通过 get 和 set 读取设置的方法
+
+```js
+  var obj = {
+          name: '曹操'
+      }
+      var wife = '小乔'
+      Object.defineProperty(obj, 'wife',{
+          get () {
+              return wife
+          },
+          set (value) {
+             wife = value
+          }
+      })
+      console.log(obj.wife)
+     obj.wife= '大乔'
+      console.log(obj.wife)
+```
+
+>但是,我们想要遍历怎么办 ? 注意哦 , 存储描述符的时候 依然拥有 **configurable** 和 **enumerable**属性,
+>
+>依然可以配置哦
+
+```js
+   // 定义一个对象
+        var person = {
+            name: '曹扬'
+        }
+        var name = '小乔'
+        Object.defineProperty(person, 'wife', {
+            enumerable: true,  //表示可以遍历到新增的属性
+            // 存取描述符
+            get (){
+                return  name  // 返回 wife的属性
+            },
+            set (value){
+                name = value
+            }
+        })
+        console.log(person.wife)
+        person.wife = '大乔' // 存取描述符的时候 不需要  value通过wriable来控制
+        console.log(person.wife)
+        for(var item in person) {
+            console.log(item)
+        }
+```
+
+数据描述符 wriable 只对 数据描述的时候 value进行控制,不能和存取描述符一起写
+
+## Object.defineProperty()-模拟vm对象
+
+>通过两个小节,学习了 defineProperty的基本使用, 接下里我们要通过defineProperty模拟 Vue实例化的效果
+
+Vue实例化的时候, 我们明明给data赋值了数据,但是却可以通过 **`vm实例.属性`**进行访问和设置
+
+怎么做的 ?
+
+```js
+var vm = new Vue({ 
+  data: {
+      name: '张三'
+  }
+})
+vm.name = '李四'
+```
+
+
+
+
+
+>实际上这就是 通过 Object.defineProperty实现的
+
+```js
+ var person = {
+       name: '曲宏劼'
+    }
+    var vm = {}  // vm对象
+    //    Object.defineProperty 存取描述符
+    Object.defineProperty(vm, 'name', {
+        // 存取描述符  get /set
+        get () {
+            return  person.name //返回person同属性的值
+        },
+        set (value) {
+            debugger
+        //    也要把person中的值给该了
+          person.name = value
+        }
+    })
+    console.log(vm.name) // 获取值 => get方法 
+    vm.name = '曲泡面' // 调用了set方法
+     console.log(vm.name)
+```
+
+>上面代码中,我们实现了 vm中的数据代理了 person中的name 直接改vm就是改person
+
+**`总结`**: 我们在 set和get的存取描述符中 代理了 person中的数据, 
+
+MVVM => 数据代理  => Object.defineProperty =>存取描述符get/set => 代理数据
+
+MVVM不但要获取这些数据,并且将这些数据 进行 响应式的更新到DOM中, 也就是 数据变化时,我们要把数据**`反映`**到视图上
+
+> 通过调试我们发现,我们是可以在set函数里面监听到数据的变化的,只需要在数据变化的时候, 通知对应的视图来更新就可以了
+
+那么 怎么通知 ? 用什么技术来做 ? 下一小节中我们将带来发布订阅模式
+
+## 发布订阅模式的介绍
+
+> 发布订阅模式为何物?
+
+其实我们早已用过很多遍,  发布 /订阅 即 有人**`发布消息`**, 有人 **`订阅消息`**,到了 数据层面 就是 多  => 多
+
+即   A程序 可以触发多个消息  也可以订阅 多个消息
+
+> 在黑马头条项目1 和项目2 中我们 曾经 用过一个**`eventBus`** 就是发布订阅模式的体现
+
+这个模式我们拿来做什么?
+
+> 上个小节,我们已经能够捕捉数据的变化,接下来,我们就要尝试在数据变化的时候通过 发布订阅这个模式 来改变我们的视图
+
+我们先写出这个发布订阅核心代码的几个要素 
+
+> 首先,我们希望 可以通过实例化 得到 发布订阅对象  
+>
+> 发布消息 $emit
+>
+> 订阅消息 $on
+
+根据上述思想,我们得到如下代码
+
+```js
+      //  创建一个构造函数
+      function Events () {}
+    //    订阅消息 监听消息
+      Events.prototype.$on = function() {}
+    //   发布消息
+      Events.prototype.$emit = function (){}
+```
+
+## 发布订阅模式的实现
+
+```js
+  <button onclick="emitEvent()">触发事件</button>
+    <script>
+        //  创建一个构造函数
+        function Events () {
+            // 构造函数
+            // 开辟一个空间 只对当前实例有效
+            this.subs = {} // 用来存储 监听的事件名和回调函数 {  键(事件名): [回调函数1, 回调函数2 ...] 值(回调函数) }
+        }
+    //    订阅消息 监听消息 eventName事件名, fn 是该事件触发时 应该触发的回调函数
+      Events.prototype.$on = function(eventName,fn) {
+        //   事件名 => 回调函数  => 触发某个事件的时候 找到这个事件对应的回调函数 并且执行
+        //  if(this.subs[eventName]) {
+        //      this.subs[eventName].push(fn)
+        //  }else {
+        //      this.subs[eventName] = [fn]
+        //  }
+        this.subs[eventName] = this.subs[eventName] || []
+        this.subs[eventName].push(fn)
+      }
+    //   发布消息 第一个参数一定是eventName(要触发的事件名)  ...params 代表 eventName之后 所有的参数
+      Events.prototype.$emit = function (eventName, ...params ) {
+        //  拿到了事件名 应该去我们的开辟的空间里面 找有没有回调函数
+          if(this.subs[eventName]) {
+            //   有人监听你的事件
+            // 调用别人的回调函数
+            this.subs[eventName].forEach(fn => {
+                // 改变this指向
+               //  fn(...params) // 调用该回调函数 并且传递参数
+                 // 三种方式 改变回调函数里的this指向
+               //   fn.apply(this, [...params]) // apply 参数 [参数列表]
+              //  fn.call(this, ...params) // 若干参数
+               fn.bind(this, ...params)() // bind用法 bind并不会执行函数 而是直接将函数this改变
+            });
+          }
+      }
+  
+       var event = new Events()  // 实例化 
+      //   开启一个监听
+       event.$on("changeName", function(a,b,c, d, e) {
+           console.log(this) 
+           alert(a + '-' +b +'-'+ c + '-'+ d +'-'+ e)
+       }) // 监听一个事件    
+
+    //    调用触发方法
+       var emitEvent = function () {
+         event.$emit("changeName", 1,2,3,4,5)
+       }
+    </script>
+```
+
+> 这里用到了call/apply/bind方法修改函数内部的this指向
+
+> 利用发布订阅模式可以实现当事件触发时会通知到很多人去做事情,Vue中做的事情是更新DOM
+
+## MVVM实现-DOM复习
+
+> 我们学习了 Object.defineProperty  和  发布订阅模式,  几乎拥有了手写一个MVVM的能力, 
+>
+> 但是在实现MVVM之前,我们还是复习一下 View中也就是 Dom中的含义及结构
+
+DOM是什么?
+
+> 文档对象模型 document
+
+Dom的作用是什么?
+
+>可以通过**`对象`**去操作页面元素
+
+Dom中的对象节点都有什么类型
+
+> 可以通过下面的一个小例子检查
+
+```html
+  <div id="app">
+        <h1>众志成城,共抗疫情</h1>
+        <div>
+            <span style='color:red;font-weight: bold;'>老高:</span>
+            <span>祝所有同学前程似锦</span>
+        </div>
+    </div>
+    <script>
+       var app = document.getElementById("app")
+       console.dir(app)
+    </script>
+```
+
+>通过上面的输出查看, 我们可以发现
+
+元素类型的节点类型 nodeType 为1 文本类型为 3, document对象里面的每个内容都是**`节点`**
+
+childNodes  是所有的节点  children指的 是所有的元素 => nodeType =1 的节点
+
+所有的子节点都放在 childNodes 这个属性下,childNodes是伪数组 => 伪数组不具有数组方法. 有length属性
+
+>所有标签的属性集合是什么?
+
+attributes  => 放置了所有的属性
+
+>分析DOM对象做什么呢? 我们前面准备的数据捕获和 发布订阅就是为了来更新DOM的
+
+接下来我们开始手写一个MVVM示例
+
+手写一个vuejs 的简易版  Object.defineProperty => 新增属性 .修改属性  数据代理 
+
+发布订阅 => 发布事件  订阅事件 
+
+Dom => 更新视图
+
+## MVVM实现-实现Vue的构造函数和数据代理
+
+>挑战来了,我们要手写 一个简易的**`vuejs`**, 提升我们自身的技术实力.
+
+> 我们要实现mvvm的构造函数
+>
+> 构造函数 模仿vuejs 分别有 data /el 
+>
+> data最终被代理给当前的vm实例, 即可以通过 vm访问,也可以通过 this.$data访问
+
+```js
+        // 手写一个mvvm 简易版的vuejs
+        // options就是选项 所有vue属性都带$
+        function Vue (options) {
+            this.$options = options  // 放置选项
+            this.$el = 
+           typeof options.el === 'string' ? document.querySelector(options.el) : options.el
+           // 将dom对象赋值给$el 和官方vuejs保持一致
+         this.$data = options.data || {}
+         //  数据代理 希望 vm能够代理 $data的数据 
+         // 希望 vm.name 就是$data.name
+         this.$proxyData() // 代理数据
+        }
+        // 数据代理好的方法
+        Vue.prototype.$proxyData = function () {
+            // this 指的就是 当前的实例
+            // key 就是 data数据中的每一个key
+            Object.keys(this.$data).forEach(key => {
+                Object.defineProperty(this, key, {
+                    // 存取描述符
+                    get () {
+                       return this.$data[key]  // 返回$data中的数据
+                    },
+                    // 设置数据时 需要 将 值设置给 $data的值 而且要判断设置之前数据是否相等
+                    set (value) {
+                        // value是新值 如果新值等于旧值 就没必要再设置了
+                        if (this.$data[key] === value ) return
+                        this.$data[key] = value // 如果不等再设置值
+                    }
+                })
+            })
+            
+        }
+     var vm =  new Vue({
+            el: '#app', // 还有可能是其他选择器 还有可能是dom对象
+            data: {
+                name: '吕布',
+                wife: '貂蝉'
+            }
+        })
+        vm.wife = '西施'
+        vm.name = '曹扬'
+        console.log(vm.name)
+```
+
+## MVVM实现-数据劫持Observer
+
+> OK,接下来这一步非常关键,我们要做**`数据劫持`**, 劫持谁? 为什么要劫持?
+
+上小节代码中, 我们可以通过 vm.name= '值' 也可以通过 vm.$data.name = '值', 那么在哪里捕捉数据的变化呢?
+
+> 不论是 this.data 还是 this.$data 改的都是$data的数据,所以我们需要对 $data的数据进行**`劫持`**, 也就是监听它的set
+
+数据劫持意味着 :   我们要监控MVVM中的 Model的数据层的变化
+
+```js
+    // 数据劫持
+        Vue.prototype.$observer = function () {
+            // 要劫持谁 ? $data
+            // 遍历 $data中的所有key
+            Object.keys(this.$data).forEach(key => {
+               // 劫持 =>劫持数据的变化 -> 监听 data中的数据的变化 => set方法
+               // obj / prop / desciptor
+               let value = this.$data[key] // 重新开辟一个空间  value的空间
+               Object.defineProperty(this.$data, key, {
+                   // 描述 => 描述符有几种 ? 数据描述符(value,writable) 存取描述符 (get/set)
+                   get () {
+                       return value
+                   },
+                   set (newValue) {
+                      if(newValue === value) return 
+                      value = newValue
+                    //   一旦进入set方法 表示 MVVM中的 M 发生了变化  data变化了
+                    // MVVVM => Model =>  发布订阅模式  => 更新Dom视图
+                   }
+               }) 
+            })
+        }
+```
+
+> 在构造函数中完成对数据的劫持
+
+```js
+  function Vue (options) {
+            this.$options = options  // 放置选项
+        this.$el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el
+           // 将dom对象赋值给$el 和官方vuejs保持一致
+         this.$data = options.data || {}
+         //  数据代理 希望 vm能够代理 $data的数据 
+         // 希望 vm.name 就是$data.name
+         this.$proxyData() // 代理数据  把$data中数据 代理给vm实例
+         this.$observer()  // 数据劫持  劫持 $data中的数据变化
+        }
+```
+
+## MVVM实现-编译模板Compiler-设计结构
+
+代理 :  $data中的所有数据都代理给了 this
+
+劫持 : $data中的数据变化
+
+> 现在我们基本实现了 实例化数据,并且完成了对数据的代理和劫持,接下来我们需要实现几个方法 
+>
+> 数据变化时 => 根据最新数据把模板转化成最新的对象
+>
+> 判断节点是否是文本节点
+>
+> 判断节点是否是 元素节点
+>
+> 判断是否是指令  v-model / v-text
+>
+> 处理元素节点  
+>
+> 处理文本节点
+>
+> 所以我们定义下面几个方法
+
+```js
+       // 编译模板的一个总方法 构造函数执行时执行
+       Vue.prototype.$compile = function () {
+        
+       }
+       // 处理文本节点 nodeType =3
+       Vue.prototype.$compileTextNode = function () {}
+    
+       // 处理元素节点 nodeType = 1的时候是元素节点
+       Vue.prototype.$compileElementNode = function () {}
+    
+      //  判断一个节点是否是文本节点
+       Vue.prototype.$isTextNode = function () {}
+      // 判断 一个节点是否是元素节点
+
+       Vue.prototype.$isElementNode = function () {}
+       
+      // 判断一个属性是否是指令 所有的指令都以 v-为开头 
+      Vue.prototype.$isDirective = function () {}
+```
+
+
+
+## MVVM实现-编译模板Compiler实现基本的框架逻辑
+
+> 我们已经通过构造函数拿到了$el,也就是页面的dom元素,接下来我们可以实现 一下编译的基本逻辑
+
+注意:  **`文本节点就不再有子节点了 因为文本就是最终的体现`**
+
+   **`元素节点 一定还有子节点`**
+
+```js
+        // 编译模板
+ // 编译模板的一个总方法 构造函数执行时执行
+        // rootnode是传入本次循环的根节点 => 找rootnode下所有的子节点 => 子节点 => 子节点=> 子节点 > 子节点 ...  找到没有子节点为止
+       Vue.prototype.$compile = function (rootnode) {
+         let nodes = Array.from(rootnode.childNodes)  // 是一个伪数组 将伪数组转成真数组
+         nodes.forEach(node => {
+            //  循环每个节点 判断节点类型 如果你是文本节点 就要用文本节点的处理方式 如果元素节点就要元素节点的处理方式
+            if(this.$isTextNode(node)) {
+                // 如果是文本节点
+                this.$compileTextNode(node) // 处理文本节点 当前的node不再有 子节点 没有必要继续找了
+            }
+            if(this.$isElementNode(node)) {
+                // 如果是元素节点
+                this.$compileElementNode(node) // 处理元素节点
+                // 如果是元素节点 下面一定还有子节点 只有文本节点才是终点
+                // 递归了 => 自身调用自身
+                this.$compile(node) // 传参数 保证一层一层找下去 找到 node.chidNodes的长度为0的时候 自动停止
+                // 可以保证 把 $el下的所有节点都遍历一遍
+            } 
+         })
+       }
+       // 处理文本节点 nodeType =3
+       Vue.prototype.$compileTextNode = function () {}
+    
+       // 处理元素节点 nodeType = 1的时候是元素节点
+       Vue.prototype.$compileElementNode = function () {}
+    
+      //  判断一个节点是否是文本节点 nodeType ===3
+       Vue.prototype.$isTextNode = function (node) {
+          return node.nodeType === 3  // 表示就是文本节点
+       }
+      // 判断 一个节点是否是元素节点
+
+       Vue.prototype.$isElementNode = function (node) {
+        return node.nodeType === 1  // 表示就是元素节点
+       }
+```
+
+>上述代码的基本逻辑就是 碰到 文本节点就用文本节点的方法处理  碰到元素节点 用元素节点的方法处理 
+>
+>如果碰到元素节点,就表示**`还没完`**  还需要调用下一级的查找
+
+## MVVM实现-编译模板Compiler-处理文本节点
+
+```js
+  // 处理文本节点 nodeType =3
+       Vue.prototype.$compileTextNode = function (node) {
+            // console.log(node.textContent)
+            // 拿到文本节点内容之后 要做什么事情 {{ name }}  => 真实的值 
+            // 正则表达式 
+            const text = node.textContent // 拿到文本节点的内容 要看一看 有没有插值表达式
+             const reg = /\{\{(.+?)\}\}/g  // 将匹配所有的 {{ 未知内容 }}
+            if (reg.test(text)) {
+                // 如果能匹配 说明 此时这个文本里有插值表达式
+                 // 表示 上一个匹配的正则表达式的值
+                const key = RegExp.$1.trim() // name属性 => 取name的值 $1取的是第一个的key
+                 node.textContent = text.replace(reg,  this[key] ) 
+                  // 获取属性的值 并且替换 文本节点中的插值表达式
+            }
+       }
+```
+
+> 提示: 实际开发时正则不需要记 但是要能看懂 
+
+## MVVM实现-编译模板Compiler-处理元素节点
+
+```js
+    
+       // 处理元素节点 nodeType = 1的时候是元素节点
+       Vue.prototype.$compileElementNode = function (node) {
+           // 指令 v-text  v-model  => 数据变化  => 视图更新 更新数据变化 
+           // v-text = '值' => innerText上  textContent
+           // 拿到该node所有的属性 
+          let attrs = Array.from(node.attributes) // 把所有的属性转化成数组
+        // 循环每个属性  属性是否带 v- 如果带 v- 表示指令
+            attrs.forEach(attr => {
+               if (this.$isDirective( attr.name)) {
+                //   判断指令类型
+                    if(attr.name === 'v-text') {
+                        // v-text的指令的含义是 v-text后面的表达的值 作用在 元素的innerText或者textContent上
+                      node.textContent = this[attr.value]   // 赋值
+                    }
+                    if(attr.name === 'v-model') {
+                        // 表示我要对当前节点进行双向绑定
+                      node.value =  this[attr.value]   // v-model要给value赋值 并不是textContent
+                    }
+
+               } // 如果以 v-开头表示 就是指令
+            })
+       }
+```
+
+## MVVM实现-数据驱动视图-发布订阅管理器
+
+> 目前响应式数据有了, 编译模板也有了, 我们需要在数据变化的时候编译模板
+>
+> 之前讲了, 这一步需要 通过发布订阅来做 ,所以我们在Vue的基础上实现发布订阅
+
+```js
+        // 手写一个mvvm 简易版的vuejs
+        // options就是选项 所有vue属性都带$
+        function Vue (options) {
+            this.subs = {} // 事件管理器
+            this.$options = options  // 放置选项
+           this.$el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el
+           // 将dom对象赋值给$el 和官方vuejs保持一致
+         this.$data = options.data || {}
+         //  数据代理 希望 vm能够代理 $data的数据 
+         // 希望 vm.name 就是$data.name
+         this.$proxyData() // 代理数据  把$data中数据 代理给vm实例
+         this.$observer()  // 数据劫持  劫持 $data中的数据变化
+         this.$compile(this.$el) // 模板第一次编译渲染 递归的要求 这里必须传入参数 
+         // 递归是一种简单的算法 => 一般用在处理树形数据,嵌套数据 中国/北京/海淀/中关村/知春路/海淀桥/982/人
+         // 递归其实就是函数自身调用自身 => 传入下一次递归的条件 => 两次递归条件一样 => 死循环了
+        }
+   // Vue的发布订阅管理器 $on $emit 
+      //  监听事件
+      Vue.prototype.$on = function (eventName, fn) {
+                  //   事件名 => 回调函数  => 触发某个事件的时候 找到这个事件对应的回调函数 并且执行
+        //  if(this.subs[eventName]) {
+        //      this.subs[eventName].push(fn)
+        //  }else {
+        //      this.subs[eventName] = [fn]
+        //  }
+        this.subs[eventName] = this.subs[eventName] || []
+        this.subs[eventName].push(fn)
+      }
+      // 触发事件
+  Vue.prototype.$emit = function (eventName, ...params) {
+       //  拿到了事件名 应该去我们的开辟的空间里面 找有没有回调函数
+       if(this.subs[eventName]) {
+            //   有人监听你的事件
+            // 调用别人的回调函数
+            this.subs[eventName].forEach(fn => {
+                // 改变this指向
+               //  fn(...params) // 调用该回调函数 并且传递参数
+                 // 三种方式 改变回调函数里的this指向
+               //   fn.apply(this, [...params]) // apply 参数 [参数列表]
+              //  fn.call(this, ...params) // 若干参数
+               fn.bind(this, ...params)() // bind用法 bind并不会执行函数 而是直接将函数this改变
+            });
+          }
+      }
+```
+
+## MVVM实现-数据变化时 驱动视图变化
+
+>现在万事俱备,只欠东风
+>
+>我们的数据代理,数据劫持,模板编译, 事件发布订阅统统搞定 现在只需要在数据变化时 ,通过事件发布,然后
+>
+>通知 数据进行编译即可
+
+```js
+        // 数据劫持
+        Vue.prototype.$observer = function () {
+            // 要劫持谁 ? $data
+            // 遍历 $data中的所有key
+            Object.keys(this.$data).forEach(key => {
+               // 劫持 =>劫持数据的变化 -> 监听 data中的数据的变化 => set方法
+               // obj / prop / desciptor
+               let value = this.$data[key] // 重新开辟一个空间  value的空间
+               Object.defineProperty(this.$data, key, {
+                   // 描述 => 描述符有几种 ? 数据描述符(value,writable) 存取描述符 (get/set)
+                   get () {
+                       return value
+                   },
+                   set: (newValue) => {
+                      if(newValue === value) return 
+                      value = newValue
+                    //   一旦进入set方法 表示 MVVM中的 M 发生了变化  data变化了
+                    // MVVVM => Model =>  发布订阅模式  => 更新Dom视图
+                      // 整体编译只执行一次 通过发布订阅模式来做 触发一个事件 视图层监听一个事件
+                     // 触发一个事件
+                     this.$emit(key) // 把属性当成事件名 触发一个事件
+                   }
+               }) 
+            })
+        }
+```
+
+>监听数据改变
+
+```js
+    // 编译模板 数据发生变化  => 模板数据更新到最新
+        
+       // 编译模板的一个总方法 构造函数执行时执行
+        // rootnode是传入本次循环的根节点 => 找rootnode下所有的子节点 => 子节点 => 子节点=> 子节点 > 子节点 ...  找到没有子节点为止
+       Vue.prototype.$compile = function (rootnode) {
+         let nodes = Array.from(rootnode.childNodes)  // 是一个伪数组 将伪数组转成真数组
+         nodes.forEach(node => {
+            //  循环每个节点 判断节点类型 如果你是文本节点 就要用文本节点的处理方式 如果元素节点就要元素节点的处理方式
+            if(this.$isTextNode(node)) {
+                // 如果是文本节点
+                this.$compileTextNode(node) // 处理文本节点 当前的node不再有 子节点 没有必要继续找了
+            }
+            if(this.$isElementNode(node)) {
+                // 如果是元素节点
+                this.$compileElementNode(node) // 处理元素节点
+                // 如果是元素节点 下面一定还有子节点 只有文本节点才是终点
+                // 递归了 => 自身调用自身
+                this.$compile(node) // 传参数 保证一层一层找下去 找到 node.chidNodes的长度为0的时候 自动停止
+                // 可以保证 把 $el下的所有节点都遍历一遍
+            } 
+         })
+       }
+       // 处理文本节点 nodeType =3
+       Vue.prototype.$compileTextNode = function (node) {
+            // console.log(node.textContent)
+            // 拿到文本节点内容之后 要做什么事情 {{ name }}  => 真实的值 
+            // 正则表达式 
+            const text = node.textContent // 拿到文本节点的内容 要看一看 有没有插值表达式
+             const reg = /\{\{(.+?)\}\}/g  // 将匹配所有的 {{ 未知内容 }}
+            if (reg.test(text)) {
+                // 如果能匹配 说明 此时这个文本里有插值表达式
+                 // 表示 上一个匹配的正则表达式的值
+                const key = RegExp.$1.trim() // name属性 => 取name的值 $1取的是第一个的key
+                 node.textContent = text.replace(reg,  this[key] ) 
+                  // 获取属性的值 并且替换 文本节点中的插值表达式
+                this.$on(key, () => {
+                    // 如果 key这个属性所代表的值发生了变化 回调函数里更新视图
+                    node.textContent = text.replace(reg, this[key] )    // 把原来的带大括号的内容替换成最新值 赋值给textContent
+                })
+            }
+       }
+    
+       // 处理元素节点 nodeType = 1的时候是元素节点
+       Vue.prototype.$compileElementNode = function (node) {
+           // 指令 v-text  v-model  => 数据变化  => 视图更新 更新数据变化 
+           // v-text = '值' => innerText上  textContent
+           // 拿到该node所有的属性 
+          let attrs = Array.from(node.attributes) // 把所有的属性转化成数组
+        // 循环每个属性  属性是否带 v- 如果带 v- 表示指令
+            attrs.forEach(attr => {
+               if (this.$isDirective( attr.name)) {
+                //   判断指令类型
+                    if(attr.name === 'v-text') {
+                        // v-text的指令的含义是 v-text后面的表达的值 作用在 元素的innerText或者textContent上
+                      node.textContent = this[attr.value]   // 赋值 attr.value => v-text="name"
+                      this.$on(attr.value, () => {
+                        node.textContent = this[attr.value]   //此时数据已经更新
+                      })
+                    }
+                    if(attr.name === 'v-model') {
+                        // 表示我要对当前节点进行双向绑定
+                      node.value =  this[attr.value]   // v-model要给value赋值 并不是textContent
+                      this.$on(attr.value, () => {
+                        node.value = this[attr.value]   //此时数据已经更新
+                      })
+                    }
+
+               } // 如果以 v-开头表示 就是指令
+            })
+       }
+```
+
+>然后我们写个例子来测试一把
+
+
+
+## MVVM实现-视图变化更新数据
+
+> 最后我们希望实现双向绑定,即视图改变时 数据同时变化
+
+```js
+       // 处理元素节点 nodeType = 1的时候是元素节点
+       Vue.prototype.$compileElementNode = function (node) {
+           // 指令 v-text  v-model  => 数据变化  => 视图更新 更新数据变化 
+           // v-text = '值' => innerText上  textContent
+           // 拿到该node所有的属性 
+          let attrs = Array.from(node.attributes) // 把所有的属性转化成数组
+        // 循环每个属性  属性是否带 v- 如果带 v- 表示指令
+            attrs.forEach(attr => {
+               if (this.$isDirective( attr.name)) {
+                //   判断指令类型
+                    if(attr.name === 'v-text') {
+                        // v-text的指令的含义是 v-text后面的表达的值 作用在 元素的innerText或者textContent上
+                      node.textContent = this[attr.value]   // 赋值 attr.value => v-text="name"
+                      this.$on(attr.value, () => {
+                        node.textContent = this[attr.value]   //此时数据已经更新
+                      })
+                    }
+                    if(attr.name === 'v-model') {
+                        // 表示我要对当前节点进行双向绑定
+                      node.value =  this[attr.value]   // v-model要给value赋值 并不是textContent
+                      this.$on(attr.value, () => {
+                        node.value = this[attr.value]   //此时数据已经更新
+                      })
+                      node.oninput = () => {
+                        //   需要把当前最新的节点的值 赋值给 本身的数据
+                        this[attr.value] =  node.value  // 视图 发生 => 数据发生变化
+                      }  // 如果一个元素绑定了v-model指令 应该监听这个元素的值改变事件
+                    }
+
+               } // 如果以 v-开头表示 就是指令
+            })
+       }
+```
+
