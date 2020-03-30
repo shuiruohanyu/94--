@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="css/mui.css" rel="stylesheet" />
+		<style type="text/css">
+			#app {
+				width: 100%;
+				position: fixed;
+				top: 0;
+				left:0;
+				height: 100%;
+				background-color: #0062CC;
+			}
+		</style>
+	</head>
+
+	<body>
+		<script src="js/mui.js"></script>
+		<script type="text/javascript">
+			mui.init()
+		</script>
+		<div id="app">
+			地图加载中...
+		</div>
+		<script type="text/javascript">
+			// 模拟器没有地图 只能在真机上测试
+		var initMap = function () {
+			// 初始化地图
+			var  map =	new plus.maps.Map("app")  // 实例化一个map对象
+			map.setCenter(new plus.maps.Point(116.635699, 40.169122))  // 设置中心点
+		}
+		// 下面代码用来保证 执行初始化地图时  plus是一定有值
+         if(window.plus) {
+			 // 如果plus存在表示 此时已经初始化原生能力 结束
+			 initMap()
+		 }else{
+			 document.addEventListener("plusready", initMap)
+		 }
+		</script>
+	</body>
+
+</html>

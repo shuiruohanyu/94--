@@ -39,20 +39,77 @@
 
 ## 移动App开发的几种方式
 
->同学回答:  感觉就一种
+>同学回答:  感觉就一种 H5
 
 1. **`原生App`**  =>  微信/ 支付宝  => 体验 界面审查 流畅度极高 => 开发语言不是h5  安卓 =>  安卓  ios =>ios
 
-2. **`WebApp`**  => 黑马头条 => webapp => 移动网站 => H5 =>vuejs
+    black黑莓 / window phone / 塞班  / 安卓 系统  => java开发 /  ios 系统  => object-c /swift 
 
-3. **`HybridApp`**  => 混合开发  => 原生 + h5
+2. **`WebApp`**  => 黑马头条 => webapp => 移动网站 => H5 =>vuejs/reactjs/angularjs/jquery/原生js
+
+3. **`HybridApp`**  => 混合开发  => 原生(提供端能力 )+ h5(业务功能 + 调用端能力)
 
 4. **`跨平台开发`** => React-Native => 跨平台 (  安卓/ 苹果 `/ 黑莓 /塞班 / windows phone )`
 
-5. 其他类型(**`小程序`**/**`快应用`**等等)  微信 /支付宝 /百度/抖音/头条/qq/钉钉/高德..
+​            React-Native 是 facebook推出的 可以一套代码 跑在 安卓系统 和 ios系统的 框架, 它是原生的
+
+​           Flutter  => Flutter 是谷歌推出的跨平台 开发项目, 也是原生 跨 安卓 + ios , 非标签形式
+
+```java
+import 'package:flutter/material.dart';
+
+void main() => runApp(new MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      title: 'Welcome to Flutter',
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: new Text('Welcome to Flutter'),
+        ),
+        body: new Center(
+          child: new Text('Hello World'),
+        ),
+      ),
+    );
+  }
+}
+```
+
+
+
+​          开发模式类似  后端开发
+
+​            React-Native 遵循 react开发规范的 原生开发  =>状态机(类似 Vue的响应式数据)
+
+```JSX
+import { View, Text  } from 'react-native/components'
+class App  extends React.Components {
+    // 渲染函数 必须实现 必须返回组件结构 必须有一个根节点
+    state = {
+       name: '张三'
+    }
+    render () {
+        let { name } = this.state
+        return (<View>
+                <Text>{ name }</Text>
+            </View>)
+    }
+}
+```
+
+weex  => 跨平台框架 ,也可以支持 Vuejs语法规范 
+
+跨平台 最重要的是  =>  生成的代码不是h5, 而是 对应的原生代码,体验 和原生几乎一样
+
+​            Reactjs  =>  遵循react开发规范的H5开发
+
+1. 其他类型(**`小程序`**/**`快应用`**等等)  微信 /支付宝 /百度/抖音/头条/qq/钉钉/高德..
 
    ...快应用
-   
+
    ![](assets/app.png)
 
 ## 移动App开发-(`原生`)NativeApp介绍和特点
@@ -62,6 +119,22 @@
 **优点**：性能和体验都是最好的, 用的都是本系统的原生组件,没有网络渲染问题
 
 **缺点**：开发和发布成本高  => 需要专业的安卓 和 ios开发人员  ios  系统 闭环 , 应用上传appStore
+
+微信会推出小程序?  ios把握着应用命脉  16
+
+支付宝 也这么想   17
+
+百度也这么想   17
+
+头条也这么想  18-19
+
+qq 也这么想 18-19
+
+钉钉 也这么想
+
+各大手机厂商也这么想
+
+抖音这么想..
 
 **应用技术**：Swift，OC，Java
 
@@ -74,6 +147,8 @@
 [M站演示](https://m.toutiao.com/?)  
 
 **定义**: 移动端的网站，常被称为**`H5应用`**，说白了就是特定运行在移动端浏览器上的网站应用。一般泛指 **`SPA`(**Single Page Application)模式开发出的网站，与**`MPA`（**Multi-page Application）对应。 
+
+8 / 10 / 12 /15
 
 **`优点`**：**开发和发布成本最低** 
 
@@ -164,8 +239,10 @@ WebView => 原生浏览器的内置浏览器
 
 6. 部分性能要求的页面可用原生实现
 
-   > 一般来说 壳+html+js+css , 壳+ 部分原生 + html/js+css
+   H5实现不了的 原生来做 
 
+   > 一般来说 壳+html+js+css , 壳+ 部分原生 + html/js+css
+   
    这应该是Hybrid模式的最多一个好处了,因为这种模式是原生混合web,所以我们完全可以将交互强,性能要求高的页面用原生写,然后一些其它页面用JS写,嵌入webview中,达到最佳体验
 
 **缺点**：学习范围较广，需要原生配合 
@@ -180,6 +257,10 @@ WebView => 原生浏览器的内置浏览器
 
 **应用技术**：[Cordova](https://cordova.apache.org/)、[APPCan](http://www.appcan.cn/)、 [DCloud](https://dcloud.io/) 、[API Cloud ](https://www.apicloud.com/)
 
+
+
+一般大公司不会用这些壳,大公司有能力 有资本 有能力自己做原生 自己封装sdk, 比如 支付宝 / 微信 .. 抖音 ./头条
+
 **四种方式对比**
 
 ![img](assets/zl9vgosvxs.png)
@@ -190,7 +271,7 @@ WebView => 原生浏览器的内置浏览器
 
 > 特点：使用类似于 Web 技术的方式来开发 Native App。
 >
-> React Native (原生开发)和 reactjs(h5开发)是两回事  => 同时都用jsx语法 ,都用react语法规范
+> React Native (原生开发)和 reactjs(h5开发)是两回事  => 同时都用jsx语法 ,都用react语法规范  状态机 state (React)  Vue (data)
 
 **定义**: **`Facebook`**发现Hybrid App存在很多缺陷和不足，于是发起开源的一套新的App开发方案**`React Native`**。使用**`JSX语言`**写原生界面，js通过JSBridge调用原生API渲染UI交互通信。
 
@@ -206,6 +287,7 @@ class App extends React.Component {
         name : '张三'
     }
     changeName () {
+       // this.name = '李四'
          // 改变张三为李四
         this.setState({ 
             name: '李四'
@@ -224,7 +306,7 @@ class App extends React.Component {
 
 React-Native 就是**`用js的方式 去开发 原生应用那个 一套代码  安卓/ios上面`**
 
-招人的 时候 会说 => 招聘 React-Native工程师
+招人的 时候 会说 => 招聘 React-Native工程师, 具备安卓和ios 相关一些背景, Android Studio  /  XCode
 
 **`优点`**：效率体验接近Native App，发布和开发成本低于Native App
 
@@ -238,7 +320,7 @@ React-Native 就是**`用js的方式 去开发 原生应用那个 一套代码  
 
    这种模式可以认为是用JS写原生,即页面用JS写,然后原生通过Bridge技术分析JS,将JS内容单独渲染成原生Android和iOS,所以也就是为什么性能不逊色原生
 
-3. 开发人员单一技术栈,一次学习,跨平台开发
+3. 开发人员单一技术栈,一次学习,跨平台开发 
 
    这种模式是统一由JS编写,有着独特的语法,所以只需要学习一次,即可同时开发Android和iOS
 
@@ -297,18 +379,25 @@ React-Native 就是**`用js的方式 去开发 原生应用那个 一套代码  
 > 小程序
 
 - **微信小程序**
+
 - 百度小程序
+
 - 头条小程序
+
 - 支付宝小程序
 
+- 快应用 ...  10大手机厂商推出的
+
   > 本质
+  
 - 混合开发 + 微信搞了一套 微信小程序的开发规范  => vue /react 
+
 - 混合开发 + 支付宝搞了一套微信小程序的开发规范 
 
 > 统一开发平台
 
-- taro(京东)->坑多 趋势很好
-- uni-app 
+- taro(京东)->坑多 趋势很好 是有react 为基础的开发语言规范
+- uni-app    是以 vuejs为基础开发语言规范
 
 >一套代码 开发多套 应用  
 >
@@ -516,60 +605,57 @@ OK,我们经过几步 完成了这样一个页面,**`注意`**,**`我们的目�
 >地图页面的模板
 >
 >```js
-><!DOCTYPE HTML>
+><!doctype html>
 ><html>
+>
 >	<head>
->		<meta charset="utf-8" />
->		<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
->		<title>Map Example</title>
->		<script type="text/javascript">
->			var em = null,
->				map = null;
->			// H5 plus事件处理
->			function plusReady() {
->				// 确保DOM解析完成
->				if (!em || !window.plus || map) {
->					return
->				};
->				map = new plus.maps.Map("map");
->			}
->			if (window.plus) {
->				plusReady();
->			} else {
->				document.addEventListener("plusready", plusReady, false);
->			}
->			// DOMContentloaded事件处理
->			document.addEventListener("DOMContentLoaded", function() {
->				em = document.getElementById("map");
->				plusReady();
->			}, false);
->		</script>
+>		<meta charset="utf-8">
+>		<title></title>
+>		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+>		<link href="css/mui.css" rel="stylesheet" />
 >		<style type="text/css">
->			#map {
+>			#app {
 >				width: 100%;
 >				position: fixed;
->				top: 0px;
->				bottom: 0px;
->				line-height: 200px;
->				text-align: center;
->				background: #FFFFFF;
+>				top: 0;
+>				left:0;
+>				height: 100%;
+>				background-color: #0062CC;
 >			}
 >		</style>
 >	</head>
+>
 >	<body>
->		<div id="map">地图加载中...</div>
+>		<script src="js/mui.js"></script>
+>		<script type="text/javascript">
+>			mui.init()
+>		</script>
+>		<div id="app">
+>			地图加载中...
+>		</div>
+>		<script type="text/javascript">
+>			// 模拟器没有地图 只能在真机上测试
+>		var initMap = function () {
+>			// 初始化地图
+>			var  map =	new plus.maps.Map("app")  // 实例化一个map对象
+>			map.setCenter(new plus.maps.Point(116.635699, 40.169122))  // 设置中心点
+>		}
+>		// 下面代码用来保证 执行初始化地图时  plus是一定有值
+>         if(window.plus) {
+>			 // 如果plus存在表示 此时已经初始化原生能力 结束
+>			 initMap()
+>		 }else{
+>			 document.addEventListener("plusready", initMap)
+>		 }
+>		</script>
 >	</body>
+>
 ></html>
 >
 >```
 >
 >设置坐标点
 >
->```js
->var HeimaToStation = function () {
->		    	map.setCenter(new plus.maps.Point(116.635672,40.169419))	
->			}
->```
 
 >接下来 ,我们做最后一个功能 打电话 ,就打给 联通客服 10010
 >
