@@ -1,5 +1,7 @@
 
 
+
+
 ## MVVM-介绍和演示
 
 ![MVVM](./assets/mvvm-3510948.png)
@@ -17,6 +19,12 @@
 * 第三个 VM, 指的是**`ViewModel`**,  也就是 视图和数据的管理者, 它管理着我们的数据 到 视图变化的工作,换到Vue中 ,它指的就是我们的当前的**`Vue实例`**,  Model数据 和 View 视图通信的一个**`桥梁`**
 
 - 简单一句话：**`数据驱动视图`**, 数据变化 =>视图更新
+
+  Vue是双向数据流,React是单向数据流
+
+  > Vue 数据变化  => 视图变化  视图变化  => 数据变化
+  >
+  > React  数据变化  => 视图变化  (自身框架只支持数据驱动视图)    (手动实现)  视图变化  => 数据变化
 
 ```js
 <!-- 视图 -->
@@ -85,12 +93,20 @@ export default {
 我们写一个最简单的 **`数据描述符`**的例子
 
 ```js
-  var obj = {
-            name: '曹扬'
+        // Object.defineProperty(obj, prop, descriptor)
+        // obj  对象  prop属性名 descriptor 描述符 (数据描述 / 存取描述)
+        var obj = {
+            msg: '愚人节,真不快乐'
         }
-       var o = Object.defineProperty(obj, 'weight', {
-            value: '280kg'
+        // 新增一个属性
+        var o = Object.defineProperty(obj, "name", {
+            // 描述符对象
+            value: '泰森' // 指的就是新增属性的值  value是固定写法
         })
+        Object.defineProperty(obj, 'msg', {
+            value: '希望找到工作'
+        })
+        // 返回值 o 就是 新增过属性的obj
         console.log(o)
 ```
 
@@ -127,7 +143,7 @@ export default {
      })
      obj.money = '20k'
      obj.weight = '200斤'
-     console.log(obj)
+     console.log(obj)  // 此时 薪水还是 10k  但是体重变成 200斤
 ```
 
 > 接下来 ,我们希望 去让一个不可变的属性变成可变的
@@ -148,10 +164,10 @@ export default {
      obj.weight = '200斤'
      console.log(obj)
      Object.defineProperty(obj, 'money', {
-         writable: true 
+         writable: true  // 只有前面配置了configurable: true 后面的属性才可以修改 
      })
      obj.money = '20k'
-     console.log(obj)
+     console.log(obj)  // 此时薪水才可以改变
 ```
 
 > 接下来,我们希望可以在遍历的时候 遍历到新添加的两个属性
@@ -163,7 +179,7 @@ export default {
      Object.defineProperty(obj, 'money', {
          value: '10k', // 薪水 此时薪水是不可改的
          configurable: true,
-         enumerable: true
+         enumerable: true  // 此属性用来 表示该属性 可以遍历循环得到
      })
      Object.defineProperty(obj, 'weight', {
          value: '150斤', // 给一万根头发

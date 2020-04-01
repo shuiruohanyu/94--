@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object.defineProperty最简单的数据描述符的例子</title>
+</head>
+
+<body>
+    <script>
+        // Object.defineProperty(obj, prop, descriptor)
+        // obj  对象  prop属性名 descriptor 描述符 (数据描述 / 存取描述)
+        var obj = {
+            msg: '愚人节,真不快乐'
+        }
+        // 新增一个属性
+        var o = Object.defineProperty(obj, "name", {
+            // 描述符对象
+            value: '泰森' // 指的就是新增属性的值  value是固定写法
+        })
+        Object.defineProperty(obj, 'msg', {
+            value: '希望找到工作'
+        })
+        // 返回值 o 就是 新增过属性的obj
+        console.log(o)
+    </script>
+</body>
+
+</html>
