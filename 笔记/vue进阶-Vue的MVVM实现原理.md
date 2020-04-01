@@ -682,29 +682,28 @@ Dom => 更新视图
 ## MVVM实现-编译模板Compiler-处理元素节点
 
 ```js
-    
-       // 处理元素节点 nodeType = 1的时候是元素节点
-       Vue.prototype.$compileElementNode = function (node) {
-           // 指令 v-text  v-model  => 数据变化  => 视图更新 更新数据变化 
-           // v-text = '值' => innerText上  textContent
-           // 拿到该node所有的属性 
-          let attrs = Array.from(node.attributes) // 把所有的属性转化成数组
-        // 循环每个属性  属性是否带 v- 如果带 v- 表示指令
+        // 处理元素类型的节点
+        Vue.prototype.$complieElementNode = function (node) {
+            // 当处理的节点是元素标签时 此时 处理指令
+            // 所有的标签的属性在 attributes
+            // 解析 判断 属性是否是指令 如果是指令 处理指令  v-text v-model
+            let attrs = Array.from(node.attributes)    // 伪数组 =>真数组 所有的属性
             attrs.forEach(attr => {
-               if (this.$isDirective( attr.name)) {
-                //   判断指令类型
-                    if(attr.name === 'v-text') {
-                        // v-text的指令的含义是 v-text后面的表达的值 作用在 元素的innerText或者textContent上
-                      node.textContent = this[attr.value]   // 赋值
+                // 判断当前的属性是否是指令
+                if (this.$isDirective(attr.name)) {
+                    // v-text  v-model
+                    if (attr.name === 'v-text') {
+                        //  
+                        node.textContent = this[attr.value.trim()]  // 获取v-text的属性名 // 将 变量的值赋值给 div的属性
                     }
-                    if(attr.name === 'v-model') {
-                        // 表示我要对当前节点进行双向绑定
-                      node.value =  this[attr.value]   // v-model要给value赋值 并不是textContent
+                    else if (attr.name === 'v-model') {
+                        // v-model是双向绑定 绑定的是元素的value值 表单的value
+                        node.value = this[attr.value.trim()]  // 此时node表示就是input
                     }
-
-               } // 如果以 v-开头表示 就是指令
+                }
             })
-       }
+
+        }
 ```
 
 ## MVVM实现-数据驱动视图-发布订阅管理器
@@ -913,4 +912,24 @@ Dom => 更新视图
             })
        }
 ```
+
+## 总结
+
+介绍MVVM
+
+数据  =>  视图
+
+视图  =>  视图
+
+Object.defineProperty   代理数据  劫持数据
+
+this.$data  =>  this
+
+劫持数据 劫持  this.$data数据的修改 =>  因为要在数据变化时 实现 视图的更新
+
+Vue的响应式数据是怎么实现的? 
+
+Object.defineProperty  => 劫持了数据的set  => 发布订阅模式  => 通知对应的视图进行更新
+
+Diff 算法 虚拟DOM   => 面试中 十有八九会问倒
 

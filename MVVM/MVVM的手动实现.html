@@ -10,12 +10,19 @@
 <body>
     <!-- 作为管理的视图 -->
     <div id="app">
+        <!-- 插值表达式 -->
         <p>{{ name }}</p>
+        <!-- v-text指令 -->
+        <div v-text="name"></div>
+        <!-- v-model指令 -->
+        <input type="text" v-model="name">
+        <input type="text" v-model="name">
     </div>
     <script>
         // 实现Vue的构造函数
         // options 表示构造参数的选项
         function Vue(options) {
+            this.subs = {} // 构造函数时 初始化一个对象用来存储事件函数
             // 如果是字符串 就用 选择器选择 如果不是 就认为是 dom对象
             // vue中所有的属性 都以$开头
             this.$el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el
@@ -59,11 +66,14 @@
                     get() {
                         return value // 返回值 
                     },
-                    set(newValue) {
+                    set: (newValue) => {
                         if (newValue === value) return
                         value = newValue  // 设置新值
                         // 一旦进入到这个位置 表示 数据变化  => 视图变化 数据变化了 => 视图 渲染  =>发布订阅模式 来通知视图
-
+                        // 发布事件
+                        console.log("被修改的属性:" + key)
+                        this.$emit(key) // key 就是谁被修改了 此时key被当成了一个事件名
+                        // 此时this不指向 vm实例
                     }
                 })
             })
@@ -99,12 +109,53 @@
                 //  如果此时能够匹配正则表达式
                 // 
                 const key = RegExp.$1.trim() // key是要替换的变量名
+                // 处理文本节点时  拿到的key 表示 要绑定这个key key只要变化 就要更新数据
+                this.$on(key, () => {
+                    //  当数据劫持的部分 触发 key修改时间时  这个回调函数就会执行
+                    // 重新渲染
+                    node.textContent = text.replace(reg, this[key]) // 直接将 this中的name替换 视图中的 {{ name }}
+                })
                 // console.log(RegExp.$1.trim())    // 获取第一个匹配的内容
                 node.textContent = text.replace(reg, this[key]) // 直接将 this中的name替换 视图中的 {{ name }}
             }
         }
         // 处理元素类型的节点
-        Vue.prototype.$complieElementNode = function () { }
+        Vue.prototype.$complieElementNode = function (node) {
+            // 当处理的节点是元素标签时 此时 处理指令
+            // 所有的标签的属性在 attributes
+            // 解析 判断 属性是否是指令 如果是指令 处理指令  v-text v-model
+            let attrs = Array.from(node.attributes)    // 伪数组 =>真数组 所有的属性
+            attrs.forEach(attr => {
+                // 判断当前的属性是否是指令
+                if (this.$isDirective(attr.name)) {
+                    // v-text  v-model
+                    if (attr.name === 'v-text') {
+                        //  监听绑定数据的变化
+                        this.$on(attr.value, () => {
+                            // 此时 再重新渲染
+                            node.textContent = this[attr.value.trim()] // 重新替换
+                        })
+                        node.textContent = this[attr.value.trim()]  // 获取v-text的属性名 // 将 变量的值赋值给 div的属性
+                    }
+                    else if (attr.name === 'v-model') {
+                        // v-model是双向绑定 绑定的是元素的value值 表单的value
+                        node.value = this[attr.value.trim()]  // 此时node表示就是input
+                        this.$on(attr.value.trim(), () => {
+                            // 数据变化 视图变化
+                            node.value = this[attr.value.trim()]  // 此时node表示就是input
+                        })
+                        // v-model 意味着双向绑定 意味着 要把最新的数据 更新改data数据
+                        node.oninput = () => {
+                            //    此时 表示视图数据变了   视图  => 数据
+                            //   attr.value.trim  v-model="name" 里面的name
+                            this[attr.value.trim()] = node.value // 直接将最新的值 赋值给数据
+
+                        } // change事件 只能离开焦点触发 input事件 可以数据一变 就会触发
+                    }
+                }
+            })
+
+        }
         // 判断 一个节点是否是 文本节点  用nodeType === 3 
         Vue.prototype.$isTextNode = function (node) {
             return node.nodeType === 3 // true 文本节点 false 不是文本节点
@@ -115,7 +166,38 @@
 
         }
         // 判断是一个属性是否是指令 判断的依据是 以v-开头
-        Vue.prototype.$isDirective = function () { }
+        Vue.prototype.$isDirective = function (name) {
+            return name.startsWith('v-') // 如果属性名以v-为开头 表示 该属性时执行
+        }
+
+        // 原型方法 $emit(触发事件)  $on(监听事件)
+        // 触发一个事件
+        // $emit("selectChange", 若干参数) ...params 就表示从第二个参数后面的所有的参数
+        Vue.prototype.$emit = function (eventName, ...params) {
+            //  去执行对应的回调函数
+            this.subs[eventName] && this.subs[eventName].forEach(fn => {
+                // fn(...params) // 直接执行fn函数  调用fn的对象 window
+                //  如果改变函数中的this指向 
+                // call  apply bind 
+                // fn.call(this, ...params)  // n个参数
+                // fn.apply(this, [...params]) // apply第二个参数是个数组
+                fn.bind(this, ...params)() // 此时只是返回一个 改变了this指向函数 并不会执行
+            });
+        }
+        // 监听事件触发
+        // eventName (监听事件名) fn(该事件触发时 调用的回调函数)
+        Vue.prototype.$on = function (eventName, fn) {
+            // if (this.subs[eventName]) {
+            //     this.subs[eventName].push(fn) // 将函数加到数组中
+            // } else {
+            //     // this.subs[eventName] = []
+            //     // this.subs[eventName].push(fn)
+            //     this.subs[eventName] = [fn]
+            //     //this.subs[eventName].push(fn)
+            // }
+            this.subs[eventName] = this.subs[eventName] || []
+            this.subs[eventName].push(fn)
+        }
         // 实例化Vue
         var vm = new Vue({
             el: '#app', // 传入所有管理的视图  有可能是id选择器 有可能是 class选择器 还有可能是dom对象
@@ -126,6 +208,7 @@
         })
         vm.name = '李四'
         vm.$data.name = '王五'
+
     </script>
 </body>
 
