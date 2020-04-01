@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object.defineProperty 模拟vm对象</title>
+</head>
+
+<body>
+    <script>
+        var data = {
+            name: '庚子初年,天下大乱,疫情危机'
+        }
+        var vm = {} // vm对象  vm代理data中的数据
+        Object.defineProperty(vm, "name", {
+            // 存取描述符
+            get() {
+                return data.name  // 返回data中的数据
+            },
+            set(value) {
+                // 设置值的时候 要去修改data中的值
+                data.name = value
+            }
+        })
+        console.log(vm.name)
+        vm.name = '春暖花开,一切如常'
+        console.log(vm.name)
+    </script>
+</body>
+
+</html>

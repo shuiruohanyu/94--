@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object.defineProperty的存取描述符模式</title>
+</head>
+
+<body>
+    <script>
+        var person = {
+            name: '曹操'
+        }
+        var name = ''
+        Object.defineProperty(person, 'wife', {
+            //   存取描述符  不需要 设置可写 和不可写
+            //  writable: false, // 是错误的 数据描述符  不能和存取描述符一起写
+            enumerable: true, // 表示该属性可以被遍历到
+            get() {
+                // 获取值
+                return name
+            },
+            set(value) {
+                // 设置值
+                name = value
+            }
+        })
+        console.log(person.wife)
+        person.wife = "大乔"
+        console.log(person.wife)
+        console.log(Object.keys(person))
+    </script>
+</body>
+
+</html>

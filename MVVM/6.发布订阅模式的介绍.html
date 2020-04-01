@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布订阅模式</title>
+</head>
+
+<body>
+    <button onclick="change()">触发事件</button>
+    <script>
+        //    希望通过实例化 得到 发布订阅 管理器
+        // 创建一个构造函数
+        function Events() {
+            //  构造函数
+            // 需要监听事件 需要去触发事件
+            // 需要一个 对象来存储 事件名称 和事件参数
+            // { (事件名1): [回调函数1, 回调函数2,回调函数3...]    }
+            // { (发工资事件): [A回调函数, B回调函数, C ,D ,E ...], (扣工资事件), (涨工资事件)  }
+            this.subs = {} // this指的是当前实例 subs里面存储的就是当前对象中放置的所有的事件 和回调函数
+        }
+        // 原型方法 $emit(触发事件)  $on(监听事件)
+        // 触发一个事件
+        // $emit("selectChange", 若干参数) ...params 就表示从第二个参数后面的所有的参数
+        Events.prototype.$emit = function (eventName, ...params) {
+            //  去执行对应的回调函数
+            this.subs[eventName] && this.subs[eventName].forEach(fn => {
+                // fn(...params) // 直接执行fn函数  调用fn的对象 window
+                //  如果改变函数中的this指向 
+                // call  apply bind 
+                // fn.call(this, ...params)  // n个参数
+                // fn.apply(this, [...params]) // apply第二个参数是个数组
+                fn.bind(this, ...params)() // 此时只是返回一个 改变了this指向函数 并不会执行
+            });
+        }
+        // 监听事件触发
+        // eventName (监听事件名) fn(该事件触发时 调用的回调函数)
+        Events.prototype.$on = function (eventName, fn) {
+            // if (this.subs[eventName]) {
+            //     this.subs[eventName].push(fn) // 将函数加到数组中
+            // } else {
+            //     // this.subs[eventName] = []
+            //     // this.subs[eventName].push(fn)
+            //     this.subs[eventName] = [fn]
+            //     //this.subs[eventName].push(fn)
+            // }
+            this.subs[eventName] = this.subs[eventName] || []
+            this.subs[eventName].push(fn)
+        }
+        var event = new Events()  // 实例化 事件管理器
+        event.$on("change", function (a, b, c) {
+            // 希望 执行function函数时  里面的this 指向的是 事件管理器
+            console.log(this)
+            alert(a + '-' + b + '-' + c)
+        })  // 先开启监听 才能 去触发事件 否则监听不到
+        // console.log(event)
+        function change() {
+            // 触发change事件
+            event.$emit("change", 1, 2, 3)
+        }
+    </script>
+</body>
+
+</html>

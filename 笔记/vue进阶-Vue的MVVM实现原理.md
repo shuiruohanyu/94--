@@ -220,21 +220,25 @@ export default {
 我们做一个 可以 通过 get 和 set 读取设置的方法
 
 ```js
-  var obj = {
-          name: '曹操'
-      }
-      var wife = '小乔'
-      Object.defineProperty(obj, 'wife',{
-          get () {
-              return wife
-          },
-          set (value) {
-             wife = value
-          }
-      })
-      console.log(obj.wife)
-     obj.wife= '大乔'
-      console.log(obj.wife)
+        var person = {
+            name: '曹操'
+        }
+        var name = ''
+        Object.defineProperty(person, 'wife', {
+            //   存取描述符  不需要 设置可写 和不可写
+            //  writable: false, // 是错误的 数据描述符  不能和存取描述符一起写
+            get() {
+                // 获取值
+                return name
+            },
+            set(value) {
+                // 设置值
+                name = value
+            }
+        })
+        console.log(person.wife)
+        person.wife = "大乔"
+        console.log(person.wife)
 ```
 
 >但是,我们想要遍历怎么办 ? 注意哦 , 存储描述符的时候 依然拥有 **configurable** 和 **enumerable**属性,
@@ -242,27 +246,27 @@ export default {
 >依然可以配置哦
 
 ```js
-   // 定义一个对象
-        var person = {
-            name: '曹扬'
+  var person = {
+            name: '曹操'
         }
-        var name = '小乔'
+        var name = ''
         Object.defineProperty(person, 'wife', {
-            enumerable: true,  //表示可以遍历到新增的属性
-            // 存取描述符
-            get (){
-                return  name  // 返回 wife的属性
+            //   存取描述符  不需要 设置可写 和不可写
+            //  writable: false, // 是错误的 数据描述符  不能和存取描述符一起写
+            enumerable: true, // 表示该属性可以被遍历到
+            get() {
+                // 获取值
+                return name
             },
-            set (value){
+            set(value) {
+                // 设置值
                 name = value
             }
         })
         console.log(person.wife)
-        person.wife = '大乔' // 存取描述符的时候 不需要  value通过wriable来控制
+        person.wife = "大乔"
         console.log(person.wife)
-        for(var item in person) {
-            console.log(item)
-        }
+        console.log(Object.keys(person))
 ```
 
 数据描述符 wriable 只对 数据描述的时候 value进行控制,不能和存取描述符一起写
@@ -291,30 +295,28 @@ vm.name = '李四'
 >实际上这就是 通过 Object.defineProperty实现的
 
 ```js
- var person = {
-       name: '曲宏劼'
-    }
-    var vm = {}  // vm对象
-    //    Object.defineProperty 存取描述符
-    Object.defineProperty(vm, 'name', {
-        // 存取描述符  get /set
-        get () {
-            return  person.name //返回person同属性的值
-        },
-        set (value) {
-            debugger
-        //    也要把person中的值给该了
-          person.name = value
+   var data = {
+            name: '庚子初年,天下大乱,疫情危机'
         }
-    })
-    console.log(vm.name) // 获取值 => get方法 
-    vm.name = '曲泡面' // 调用了set方法
-     console.log(vm.name)
+        var vm = {} // vm对象  vm代理data中的数据
+        Object.defineProperty(vm, "name", {
+            // 存取描述符
+            get() {
+                return data.name  // 返回data中的数据
+            },
+            set(value) {
+                // 设置值的时候 要去修改data中的值
+                data.name = value
+            }
+        })
+        console.log(vm.name)
+        vm.name = '春暖花开,一切如常'
+        console.log(vm.name)
 ```
 
->上面代码中,我们实现了 vm中的数据代理了 person中的name 直接改vm就是改person
+>上面代码中,我们实现了 vm中的数据代理了 data中的name 直接改vm就是改data
 
-**`总结`**: 我们在 set和get的存取描述符中 代理了 person中的数据, 
+**`总结`**: 我们在 set和get的存取描述符中 代理了 data中的数据, 
 
 MVVM => 数据代理  => Object.defineProperty =>存取描述符get/set => 代理数据
 
@@ -360,54 +362,55 @@ MVVM不但要获取这些数据,并且将这些数据 进行 响应式的更新�
 ## 发布订阅模式的实现
 
 ```js
-  <button onclick="emitEvent()">触发事件</button>
-    <script>
-        //  创建一个构造函数
-        function Events () {
-            // 构造函数
-            // 开辟一个空间 只对当前实例有效
-            this.subs = {} // 用来存储 监听的事件名和回调函数 {  键(事件名): [回调函数1, 回调函数2 ...] 值(回调函数) }
+   //    希望通过实例化 得到 发布订阅 管理器
+        // 创建一个构造函数
+        function Events() {
+            //  构造函数
+            // 需要监听事件 需要去触发事件
+            // 需要一个 对象来存储 事件名称 和事件参数
+            // { (事件名1): [回调函数1, 回调函数2,回调函数3...]    }
+            // { (发工资事件): [A回调函数, B回调函数, C ,D ,E ...], (扣工资事件), (涨工资事件)  }
+            this.subs = {} // this指的是当前实例 subs里面存储的就是当前对象中放置的所有的事件 和回调函数
         }
-    //    订阅消息 监听消息 eventName事件名, fn 是该事件触发时 应该触发的回调函数
-      Events.prototype.$on = function(eventName,fn) {
-        //   事件名 => 回调函数  => 触发某个事件的时候 找到这个事件对应的回调函数 并且执行
-        //  if(this.subs[eventName]) {
-        //      this.subs[eventName].push(fn)
-        //  }else {
-        //      this.subs[eventName] = [fn]
-        //  }
-        this.subs[eventName] = this.subs[eventName] || []
-        this.subs[eventName].push(fn)
-      }
-    //   发布消息 第一个参数一定是eventName(要触发的事件名)  ...params 代表 eventName之后 所有的参数
-      Events.prototype.$emit = function (eventName, ...params ) {
-        //  拿到了事件名 应该去我们的开辟的空间里面 找有没有回调函数
-          if(this.subs[eventName]) {
-            //   有人监听你的事件
-            // 调用别人的回调函数
-            this.subs[eventName].forEach(fn => {
-                // 改变this指向
-               //  fn(...params) // 调用该回调函数 并且传递参数
-                 // 三种方式 改变回调函数里的this指向
-               //   fn.apply(this, [...params]) // apply 参数 [参数列表]
-              //  fn.call(this, ...params) // 若干参数
-               fn.bind(this, ...params)() // bind用法 bind并不会执行函数 而是直接将函数this改变
+        // 原型方法 $emit(触发事件)  $on(监听事件)
+        // 触发一个事件
+        // $emit("selectChange", 若干参数) ...params 就表示从第二个参数后面的所有的参数
+        Events.prototype.$emit = function (eventName, ...params) {
+            //  去执行对应的回调函数
+            this.subs[eventName] && this.subs[eventName].forEach(fn => {
+                // fn(...params) // 直接执行fn函数  调用fn的对象 window
+                //  如果改变函数中的this指向 
+                // call  apply bind 
+                // fn.call(this, ...params)  // n个参数
+                // fn.apply(this, [...params]) // apply第二个参数是个数组
+                fn.bind(this, ...params)() // 此时只是返回一个 改变了this指向函数 并不会执行
             });
-          }
-      }
-  
-       var event = new Events()  // 实例化 
-      //   开启一个监听
-       event.$on("changeName", function(a,b,c, d, e) {
-           console.log(this) 
-           alert(a + '-' +b +'-'+ c + '-'+ d +'-'+ e)
-       }) // 监听一个事件    
-
-    //    调用触发方法
-       var emitEvent = function () {
-         event.$emit("changeName", 1,2,3,4,5)
-       }
-    </script>
+        }
+        // 监听事件触发
+        // eventName (监听事件名) fn(该事件触发时 调用的回调函数)
+        Events.prototype.$on = function (eventName, fn) {
+            // if (this.subs[eventName]) {
+            //     this.subs[eventName].push(fn) // 将函数加到数组中
+            // } else {
+            //     // this.subs[eventName] = []
+            //     // this.subs[eventName].push(fn)
+            //     this.subs[eventName] = [fn]
+            //     //this.subs[eventName].push(fn)
+            // }
+            this.subs[eventName] = this.subs[eventName] || []
+            this.subs[eventName].push(fn)
+        }
+        var event = new Events()  // 实例化 事件管理器
+        event.$on("change", function (a, b, c) {
+            // 希望 执行function函数时  里面的this 指向的是 事件管理器
+            console.log(this)
+            alert(a + '-' + b + '-' + c)
+        })  // 先开启监听 才能 去触发事件 否则监听不到
+        // console.log(event)
+        function change() {
+            // 触发change事件
+            event.$emit("change", 1, 2, 3)
+        }
 ```
 
 > 这里用到了call/apply/bind方法修改函数内部的this指向
