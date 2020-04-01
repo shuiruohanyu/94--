@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVVM的手工实现</title>
+</head>
+
+<body>
+    <!-- 作为管理的视图 -->
+    <div id="app"></div>
+    <script>
+        // 实现Vue的构造函数
+        // options 表示构造参数的选项
+        function Vue(options) {
+            // 如果是字符串 就用 选择器选择 如果不是 就认为是 dom对象
+            // vue中所有的属性 都以$开头
+            this.$el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el
+            // 原来在vue中 this.$data获取数据
+            this.$data = options.data || {}  // 将选项中data赋值给 this.$data
+            // 下一步 要代理$data中的数据
+            // this.name  等价于 this.$data.name
+            // this 代理 this.$data中所有的属性  用  Object.defineProperty
+            this.$proxyData() // 代理数据 把 $data中数据 用 this 代理
+            this.$observer() // 完成数据劫持
+        }
+        // 代理数据方法  目的是 this 代理所有的this.$data中的属性
+        // 数据代理
+        Vue.prototype.$proxyData = function () {
+            // this 就是当前的vm实例
+            Object.keys(this.$data).forEach(key => {
+                // key 就是当掐你data中的每个属性
+                Object.defineProperty(this, key, {
+                    // 数据描述符 存取描述符
+                    get() {
+                        // 返回这个key的值
+                        return this.$data[key] // 返回$data中的数据
+                    },
+                    set(value) {
+                        // 如果 设置的值 和原来的值 一样的话  就没有 必要设置了
+                        if (this.$data[key] === value) return
+                        this.$data[key] = value  // 设置值给$data中的数据
+                    }
+                })
+            })
+        }
+        // 数据劫持   要劫持 $data的数据变化 因为需要在数据变化时  => 视图更新
+        // 此方法的目的是 劫持数据的更新  在更新的时候 通知视图
+        Vue.prototype.$observer = function () {
+            Object.keys(this.$data).forEach(key => {
+                // 先要获取每个属性的初始值 
+                let value = this.$data[key] // 此时value是 初始值
+                Object.defineProperty(this.$data, key, {
+                    get() {
+                        return value // 返回值 
+                    },
+                    set(newValue) {
+                        if (newValue === value) return
+                        value = newValue  // 设置新值
+                        // 一旦进入到这个位置 表示 数据变化  => 视图变化 数据变化了 => 视图 渲染  =>发布订阅模式 来通知视图
+
+                    }
+                })
+            })
+        }
+        // 实例化Vue
+        var vm = new Vue({
+            el: '#app', // 传入所有管理的视图  有可能是id选择器 有可能是 class选择器 还有可能是dom对象
+            data: {
+                name: '张三',
+                age: 18
+            }
+        })
+        console.log(vm.name)
+        vm.name = '李四'
+        console.log(vm.name)
+        vm.$data.name = '王五'
+        console.log(vm.name)
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dom的节点类型</title>
+</head>
+
+<body>
+    <!-- dom中所有属性都位于 attributes中 -->
+    <div id='app' name='张三' age="18">
+        <h1>春暖花开</h1>
+        <div>
+            <span style="color:red;font-weight: bold;font-size:20px">2020年祝愿所有的同学 心想事成 一切顺利</span>
+            <span>落款: 老高</span>
+        </div>
+    </div>
+    <script>
+        // 类数组 转化成伪数组
+        // Array.from
+        // Array.prototype.slice(类数组) // 转化成 真正的数组
+        //  for 循环 类型数组 => 新建一个新数组  => 元素加入到数组中
+
+        var app = document.getElementById("app")
+        console.dir(app)
+    </script>
+</body>
+
+</html>

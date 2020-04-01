@@ -482,48 +482,39 @@ Dom => 更新视图
 > data最终被代理给当前的vm实例, 即可以通过 vm访问,也可以通过 this.$data访问
 
 ```js
-        // 手写一个mvvm 简易版的vuejs
-        // options就是选项 所有vue属性都带$
-        function Vue (options) {
-            this.$options = options  // 放置选项
-            this.$el = 
-           typeof options.el === 'string' ? document.querySelector(options.el) : options.el
-           // 将dom对象赋值给$el 和官方vuejs保持一致
-         this.$data = options.data || {}
-         //  数据代理 希望 vm能够代理 $data的数据 
-         // 希望 vm.name 就是$data.name
-         this.$proxyData() // 代理数据
+ // 实现Vue的构造函数
+        // options 表示构造参数的选项
+        function Vue(options) {
+            // 如果是字符串 就用 选择器选择 如果不是 就认为是 dom对象
+            // vue中所有的属性 都以$开头
+            this.$el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el
+            // 原来在vue中 this.$data获取数据
+            this.$data = options.data || {}  // 将选项中data赋值给 this.$data
+            // 下一步 要代理$data中的数据
+            // this.name  等价于 this.$data.name
+            // this 代理 this.$data中所有的属性  用  Object.defineProperty
+            this.$proxyData() // 代理数据 把 $data中数据 用 this 代理
         }
-        // 数据代理好的方法
+        // 代理数据方法  目的是 this 代理所有的this.$data中的属性
+        // 数据代理
         Vue.prototype.$proxyData = function () {
-            // this 指的就是 当前的实例
-            // key 就是 data数据中的每一个key
+            // this 就是当前的vm实例
             Object.keys(this.$data).forEach(key => {
+                // key 就是当掐你data中的每个属性
                 Object.defineProperty(this, key, {
-                    // 存取描述符
-                    get () {
-                       return this.$data[key]  // 返回$data中的数据
+                    // 数据描述符 存取描述符
+                    get() {
+                        // 返回这个key的值
+                        return this.$data[key] // 返回$data中的数据
                     },
-                    // 设置数据时 需要 将 值设置给 $data的值 而且要判断设置之前数据是否相等
-                    set (value) {
-                        // value是新值 如果新值等于旧值 就没必要再设置了
-                        if (this.$data[key] === value ) return
-                        this.$data[key] = value // 如果不等再设置值
+                    set(value) {
+                        // 如果 设置的值 和原来的值 一样的话  就没有 必要设置了
+                        if (this.$data[key] === value) return
+                        this.$data[key] = value  // 设置值给$data中的数据
                     }
                 })
             })
-            
         }
-     var vm =  new Vue({
-            el: '#app', // 还有可能是其他选择器 还有可能是dom对象
-            data: {
-                name: '吕布',
-                wife: '貂蝉'
-            }
-        })
-        vm.wife = '西施'
-        vm.name = '曹扬'
-        console.log(vm.name)
 ```
 
 ## MVVM实现-数据劫持Observer
@@ -537,26 +528,23 @@ Dom => 更新视图
 数据劫持意味着 :   我们要监控MVVM中的 Model的数据层的变化
 
 ```js
-    // 数据劫持
+  // 数据劫持   要劫持 $data的数据变化 因为需要在数据变化时  => 视图更新
+        // 此方法的目的是 劫持数据的更新  在更新的时候 通知视图
         Vue.prototype.$observer = function () {
-            // 要劫持谁 ? $data
-            // 遍历 $data中的所有key
             Object.keys(this.$data).forEach(key => {
-               // 劫持 =>劫持数据的变化 -> 监听 data中的数据的变化 => set方法
-               // obj / prop / desciptor
-               let value = this.$data[key] // 重新开辟一个空间  value的空间
-               Object.defineProperty(this.$data, key, {
-                   // 描述 => 描述符有几种 ? 数据描述符(value,writable) 存取描述符 (get/set)
-                   get () {
-                       return value
-                   },
-                   set (newValue) {
-                      if(newValue === value) return 
-                      value = newValue
-                    //   一旦进入set方法 表示 MVVM中的 M 发生了变化  data变化了
-                    // MVVVM => Model =>  发布订阅模式  => 更新Dom视图
-                   }
-               }) 
+                // 先要获取每个属性的初始值 
+                let value = this.$data[key] // 此时value是 初始值
+                Object.defineProperty(this.$data, key, {
+                    get() {
+                        return value // 返回值 
+                    },
+                    set(newValue) {
+                        if (newValue === value) return
+                        value = newValue  // 设置新值
+                        // 一旦进入到这个位置 表示 数据变化  => 视图变化 数据变化了 => 视图 渲染  =>发布订阅模式 来通知视图
+
+                    }
+                })
             })
         }
 ```
@@ -564,15 +552,19 @@ Dom => 更新视图
 > 在构造函数中完成对数据的劫持
 
 ```js
-  function Vue (options) {
-            this.$options = options  // 放置选项
-        this.$el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el
-           // 将dom对象赋值给$el 和官方vuejs保持一致
-         this.$data = options.data || {}
-         //  数据代理 希望 vm能够代理 $data的数据 
-         // 希望 vm.name 就是$data.name
-         this.$proxyData() // 代理数据  把$data中数据 代理给vm实例
-         this.$observer()  // 数据劫持  劫持 $data中的数据变化
+   // 实现Vue的构造函数
+        // options 表示构造参数的选项
+        function Vue(options) {
+            // 如果是字符串 就用 选择器选择 如果不是 就认为是 dom对象
+            // vue中所有的属性 都以$开头
+            this.$el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el
+            // 原来在vue中 this.$data获取数据
+            this.$data = options.data || {}  // 将选项中data赋值给 this.$data
+            // 下一步 要代理$data中的数据
+            // this.name  等价于 this.$data.name
+            // this 代理 this.$data中所有的属性  用  Object.defineProperty
+            this.$proxyData() // 代理数据 把 $data中数据 用 this 代理
+            this.$observer() // 完成数据劫持
         }
 ```
 
