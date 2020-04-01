@@ -591,24 +591,18 @@ Dom => 更新视图
 > 所以我们定义下面几个方法
 
 ```js
-       // 编译模板的一个总方法 构造函数执行时执行
-       Vue.prototype.$compile = function () {
-        
-       }
-       // 处理文本节点 nodeType =3
-       Vue.prototype.$compileTextNode = function () {}
-    
-       // 处理元素节点 nodeType = 1的时候是元素节点
-       Vue.prototype.$compileElementNode = function () {}
-    
-      //  判断一个节点是否是文本节点
-       Vue.prototype.$isTextNode = function () {}
-      // 判断 一个节点是否是元素节点
-
-       Vue.prototype.$isElementNode = function () {}
-       
-      // 判断一个属性是否是指令 所有的指令都以 v-为开头 
-      Vue.prototype.$isDirective = function () {}
+        // 编辑模板的总方法 需要在 构造函数时执行
+        Vue.prototype.$complie = function () { }
+        // 处理文本类型的节点
+        Vue.prototype.$complieTextNode = function () { }
+        // 处理元素类型的节点
+        Vue.prototype.$complieElementNode = function () { }
+        // 判断 一个节点是否是 文本节点
+        Vue.prototype.$isTextNode = function () { }
+        // 是否是元素节点
+        Vue.prototype.$isElementNode = function () { }
+        // 判断是一个属性是否是指令 判断的依据是 以v-开头
+        Vue.prototype.$isDirective = function () { }
 ```
 
 
@@ -622,42 +616,43 @@ Dom => 更新视图
    **`元素节点 一定还有子节点`**
 
 ```js
-        // 编译模板
- // 编译模板的一个总方法 构造函数执行时执行
-        // rootnode是传入本次循环的根节点 => 找rootnode下所有的子节点 => 子节点 => 子节点=> 子节点 > 子节点 ...  找到没有子节点为止
-       Vue.prototype.$compile = function (rootnode) {
-         let nodes = Array.from(rootnode.childNodes)  // 是一个伪数组 将伪数组转成真数组
-         nodes.forEach(node => {
-            //  循环每个节点 判断节点类型 如果你是文本节点 就要用文本节点的处理方式 如果元素节点就要元素节点的处理方式
-            if(this.$isTextNode(node)) {
-                // 如果是文本节点
-                this.$compileTextNode(node) // 处理文本节点 当前的node不再有 子节点 没有必要继续找了
-            }
-            if(this.$isElementNode(node)) {
-                // 如果是元素节点
-                this.$compileElementNode(node) // 处理元素节点
-                // 如果是元素节点 下面一定还有子节点 只有文本节点才是终点
-                // 递归了 => 自身调用自身
-                this.$compile(node) // 传参数 保证一层一层找下去 找到 node.chidNodes的长度为0的时候 自动停止
-                // 可以保证 把 $el下的所有节点都遍历一遍
-            } 
-         })
-       }
-       // 处理文本节点 nodeType =3
-       Vue.prototype.$compileTextNode = function () {}
-    
-       // 处理元素节点 nodeType = 1的时候是元素节点
-       Vue.prototype.$compileElementNode = function () {}
-    
-      //  判断一个节点是否是文本节点 nodeType ===3
-       Vue.prototype.$isTextNode = function (node) {
-          return node.nodeType === 3  // 表示就是文本节点
-       }
-      // 判断 一个节点是否是元素节点
+  // 编辑模板的总方法 需要在 构造函数时执行
+        // 这个方法 要处理 所有的节点  递归  递归就是自身调用自身 但是请切记 递归的方法体 一定要有条件限制 否则 死循环
+        // rootnode 是本地递归调用的一个起点
+        Vue.prototype.$complie = function (rootnode) {
+            // 拿到rootnode 先要获取rootnode的子节点
+            let nodes = Array.from(rootnode.childNodes)    // 伪数组 => 真正数组
+            nodes.forEach(node => {
+                // 判断 当前节点类型 如果是文本节点  就不再有 子节点了
+                if (this.$isTextNode(node)) {
+                    //    如果当前的node是文本节点  就不需要再对此node 下的子节点进行处理了
+                    // 只需要处理该节点即可
+                    this.$complieTextNode(node) // 处理文本类型节点
+                }
+                else if (this.$isElementNode(node)) {
+                    // 如果是节点是一个元素节点 表示它肯定还有下一个节点 
+                    // 先处理 当前元素的内容
+                    this.$complieElementNode(node) // 处理元素类型的节点
+                    // 此时就要调用自身的方法 递归
+                    this.$complie(node) // 调用自身的方法 传入当前node 作为下一个找寻的起点 自身调用自身 知道 所有的childNodes的长度为0
+                }
+            })
+        }
+        // 处理文本类型的节点
+        Vue.prototype.$complieTextNode = function () { }
+        // 处理元素类型的节点
+        Vue.prototype.$complieElementNode = function () { }
+        // 判断 一个节点是否是 文本节点  用nodeType === 3 
+        Vue.prototype.$isTextNode = function (node) {
+            return node.nodeType === 3 // true 文本节点 false 不是文本节点
+        }
+        // 是否是元素节点 nodeType ===1 元素节点
+        Vue.prototype.$isElementNode = function (node) {
+            return node.nodeType === 1 // true 元素节点 false 不是元素节点
 
-       Vue.prototype.$isElementNode = function (node) {
-        return node.nodeType === 1  // 表示就是元素节点
-       }
+        }
+        // 判断是一个属性是否是指令 判断的依据是 以v-开头
+        Vue.prototype.$isDirective = function () { }
 ```
 
 >上述代码的基本逻辑就是 碰到 文本节点就用文本节点的方法处理  碰到元素节点 用元素节点的方法处理 
@@ -667,21 +662,19 @@ Dom => 更新视图
 ## MVVM实现-编译模板Compiler-处理文本节点
 
 ```js
-  // 处理文本节点 nodeType =3
-       Vue.prototype.$compileTextNode = function (node) {
-            // console.log(node.textContent)
-            // 拿到文本节点内容之后 要做什么事情 {{ name }}  => 真实的值 
-            // 正则表达式 
-            const text = node.textContent // 拿到文本节点的内容 要看一看 有没有插值表达式
-             const reg = /\{\{(.+?)\}\}/g  // 将匹配所有的 {{ 未知内容 }}
+        // 处理文本类型的节点
+        Vue.prototype.$complieTextNode = function (node) {
+            // 处理文本节点  把文本中的插值表达式 中的变量   替换成 $data中的值 也就是this中的值
+            const text = node.textContent // 文本内容
+            const reg = /\{\{(.+?)\}\}/g  // 匹配所有的 {{ 内容  }}  ? 非贪婪模式  {{ name }}  {{  age }}
             if (reg.test(text)) {
-                // 如果能匹配 说明 此时这个文本里有插值表达式
-                 // 表示 上一个匹配的正则表达式的值
-                const key = RegExp.$1.trim() // name属性 => 取name的值 $1取的是第一个的key
-                 node.textContent = text.replace(reg,  this[key] ) 
-                  // 获取属性的值 并且替换 文本节点中的插值表达式
+                //  如果此时能够匹配正则表达式
+                // 
+                const key = RegExp.$1.trim() // key是要替换的变量名
+                // console.log(RegExp.$1.trim())    // 获取第一个匹配的内容
+                node.textContent = text.replace(reg, this[key]) // 直接将 this中的name替换 视图中的 {{ name }}
             }
-       }
+        }
 ```
 
 > 提示: 实际开发时正则不需要记 但是要能看懂 

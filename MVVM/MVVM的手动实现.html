@@ -9,7 +9,9 @@
 
 <body>
     <!-- 作为管理的视图 -->
-    <div id="app"></div>
+    <div id="app">
+        <p>{{ name }}</p>
+    </div>
     <script>
         // 实现Vue的构造函数
         // options 表示构造参数的选项
@@ -24,6 +26,8 @@
             // this 代理 this.$data中所有的属性  用  Object.defineProperty
             this.$proxyData() // 代理数据 把 $data中数据 用 this 代理
             this.$observer() // 完成数据劫持
+            //  this.$el 就是整个的根节点
+            this.$complie(this.$el)  // 构造函数 中第一次 调用编辑模板 递归是一定要传参的 而且必须 每次的参数都不一样  如果参数一样 死循环
         }
         // 代理数据方法  目的是 this 代理所有的this.$data中的属性
         // 数据代理
@@ -64,6 +68,54 @@
                 })
             })
         }
+        // 编辑模板的总方法 需要在 构造函数时执行
+        // 这个方法 要处理 所有的节点  递归  递归就是自身调用自身 但是请切记 递归的方法体 一定要有条件限制 否则 死循环
+        // rootnode 是本地递归调用的一个起点
+        Vue.prototype.$complie = function (rootnode) {
+            // 拿到rootnode 先要获取rootnode的子节点
+            let nodes = Array.from(rootnode.childNodes)    // 伪数组 => 真正数组
+            nodes.forEach(node => {
+                // 判断 当前节点类型 如果是文本节点  就不再有 子节点了
+                if (this.$isTextNode(node)) {
+                    //    如果当前的node是文本节点  就不需要再对此node 下的子节点进行处理了
+                    // 只需要处理该节点即可
+                    this.$complieTextNode(node) // 处理文本类型节点
+                }
+                else if (this.$isElementNode(node)) {
+                    // 如果是节点是一个元素节点 表示它肯定还有下一个节点 
+                    // 先处理 当前元素的内容
+                    this.$complieElementNode(node) // 处理元素类型的节点
+                    // 此时就要调用自身的方法 递归
+                    this.$complie(node) // 调用自身的方法 传入当前node 作为下一个找寻的起点 自身调用自身 知道 所有的childNodes的长度为0
+                }
+            })
+        }
+        // 处理文本类型的节点
+        Vue.prototype.$complieTextNode = function (node) {
+            // 处理文本节点  把文本中的插值表达式 中的变量   替换成 $data中的值 也就是this中的值
+            const text = node.textContent // 文本内容
+            const reg = /\{\{(.+?)\}\}/g  // 匹配所有的 {{ 内容  }}  ? 非贪婪模式  {{ name }}  {{  age }}
+            if (reg.test(text)) {
+                //  如果此时能够匹配正则表达式
+                // 
+                const key = RegExp.$1.trim() // key是要替换的变量名
+                // console.log(RegExp.$1.trim())    // 获取第一个匹配的内容
+                node.textContent = text.replace(reg, this[key]) // 直接将 this中的name替换 视图中的 {{ name }}
+            }
+        }
+        // 处理元素类型的节点
+        Vue.prototype.$complieElementNode = function () { }
+        // 判断 一个节点是否是 文本节点  用nodeType === 3 
+        Vue.prototype.$isTextNode = function (node) {
+            return node.nodeType === 3 // true 文本节点 false 不是文本节点
+        }
+        // 是否是元素节点 nodeType ===1 元素节点
+        Vue.prototype.$isElementNode = function (node) {
+            return node.nodeType === 1 // true 元素节点 false 不是元素节点
+
+        }
+        // 判断是一个属性是否是指令 判断的依据是 以v-开头
+        Vue.prototype.$isDirective = function () { }
         // 实例化Vue
         var vm = new Vue({
             el: '#app', // 传入所有管理的视图  有可能是id选择器 有可能是 class选择器 还有可能是dom对象
@@ -72,11 +124,8 @@
                 age: 18
             }
         })
-        console.log(vm.name)
         vm.name = '李四'
-        console.log(vm.name)
         vm.$data.name = '王五'
-        console.log(vm.name)
     </script>
 </body>
 
