@@ -349,6 +349,8 @@ $ npm run dev
 >
 >双11 => 大流量访问页面的时候 => 首页做成服务端渲染项目
 
+一般来讲,服务端渲染只需要做首页
+
 ## Nuxt路由的动态路由
 
 > Nuxt会帮我们生成对应的路由,但是 我们之前学过 动态路由怎么办
@@ -402,9 +404,19 @@ router: {
 
 > 我们可以尝试一下
 
+动态路由中 **`?`**   的含义是什么?
+
+**`可传可不传`**      { path: '/user/:id?' ,component: {} }    =>  如果你传的地址 是 /user/1 => 匹配组件 
+
+ 如果你传的地址 是 /user => 匹配组件 
+
+  { path: '/user/:id' ,component: {} }  =>  只能匹配   /user/1
+
 ## Nuxt的asyncData 和生命周期
 
 > Nuxt.js 扩展了 Vue.js，增加了一个叫 `asyncData` 的方法，使得我们可以在设置组件的数据之前能异步获取或处理数据。
+
+nuxt => 服务端渲染 =>  返回的页面结构 是需要数据的, 需要返回页面结构之前 进行 ajax请求
 
 Vue.js =>  实例创建前后  /  页面渲染前后 /  数据更新前后 / 组件卸载前后
 
@@ -438,52 +450,58 @@ $ npm i axios
 
 ```vue
 <template>
-<!-- 列表    -->
-  <div class='async-list'>
-      <!-- 后端接口请求的数据 -->
-      <!-- v-for是在 服务端执行 还是在客户端执行的 -->
-      <div :class="{select: selectId === item.id}" class='item' @click="clickItem(item.id)" v-for="item in list" :key="item.id">{{ item.name }}</div>
+  <div class='app'>
+      <!-- 头 -->
+      <div class="header">水若寒宇</div>
+      <!-- 尾部 -->
+      <div class="body">
+           <div class='item' v-for="item in list" :key="item.id">
+               <span>{{ item.name }}</span>
+               <span>{{ new Date().toDateString() }}</span>
+           </div>
+      </div>
   </div>
 </template>
 
 <script>
-import axios  from 'axios'
+import axios from 'axios' 
 export default {
   data () {
-        return {
-            selectId: null
-        }
+    return {
+      
+    }
   },
-  methods:{
-      clickItem (id) {
-          this.selectId = id  // 记录当前谁被选中
-      }
-  },
-    // 执行asyncData的时候 还没有 this  不能给data赋值
-  async asyncData () {
-   let { data }  =  await axios({
-          url: 'http://ttapi.research.itcast.cn/mp/v1_0/channels' // 请求黑马头条的地址
-      })
-     // this.list = data.data.channels  这种写法是错误的 因为 执行asyncData的时候 组件还没实例化 this是undefined
-      return {
-       list : data.data.channels  // 返回频道数据 该频道会和 data数据进行合并
-      }
-   }
+ async asyncData () {
+    // 这里不能用this 因为执行该函数时  组件还没有实例化
+    // 执行asyncData时  还在服务端 还没有返回数据
+  let { data } = await axios({
+      url:'http://ttapi.research.itcast.cn/app/v1_0/user/channels'
+    })
+    // 等到频道的数据加载 然后返回 频道数据  返回的频道数据会和 data进行融合
+    return { list: data.data.channels }
+  }
 }
 </script>
 
 <style>
-   .item {
-       height: 40px;
-       line-height: 40px;
-       padding: 0 10px;
-       text-align: center;
+  .header {
+         height: 50px;
+         background-color: aquamarine;
+         text-align: center;
+         font-size: 20px;
+         line-height: 50px;
+  }
+.item {
+     display: flex;
+    justify-content: space-between;
+    padding: 0px 10px;
+    height: 40px;
+    line-height: 40px;
    }
-   .select {
-       color: red;
-       font-weight: bold;
-       border: 2px solid red;
-   }
+    span:nth-child(2) {
+        font-size: 14px;
+        color:#ccc;
+}
 </style>
 ```
 
