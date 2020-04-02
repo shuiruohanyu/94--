@@ -551,7 +551,7 @@ $ npm run dev # 使用 dev
 
 > 什么 ? 完全没印象 !  
 
-没印象没关系,这里奉上老铁的[git仓库地址](https://github.com/shuiruohanyu/90heimatoutiao)  
+没印象没关系,这里奉上老铁的[git仓库地址](https://github.com/shuiruohanyu/94-heimatoutiaopc.git)  
 
 > 我们的目的是 平移一两个黑马头条的页面过来
 
@@ -571,36 +571,41 @@ $ npm i less less-loader # 安装less 和less-loader
 
 **`login/index.vue`**
 
-```代码
+```vue
 <template>
   <div class="login">
-    <!-- 放置一个el-card组件 -->
+    <!-- 表单 -->
     <el-card class="login-card">
-      <!-- 放置标题图片 -->
+      <!-- 表单内容 -->
+      <!-- 头部logo部分 -->
       <div class="title">
         <img src="../../assets/img/logo_index.png" alt="">
       </div>
-      <!-- 放置表单  el-form model  绑定数据对象 -->
-      <el-form ref="myForm" :model="loginForm" :rules="loginRules">
-        <!-- 表单域 里面  prop要写要检验的字段名  放置 input/select/checkbox 相当于一行-->
+      <!-- 表单 绑定model属性  绑定rules属性(表单验证规则) ref 给el-form一个属性-->
+      <el-form ref="loginForm" :model="loginForm" :rules="loginRules" style="margin-top:20px">
+        <!-- 表单容器 设置prop属性 prop表示要校验的字段名-->
         <el-form-item prop="mobile">
+          <!-- 表单域  v-model双向绑定 -->
           <el-input v-model="loginForm.mobile" placeholder="请输入手机号" />
         </el-form-item>
-        <!-- 表单域 -->
+        <!-- 验证码 -->
         <el-form-item prop="code">
-          <el-input v-model="loginForm.code" style="width:65%" placeholder="验证码" />
+          <el-input v-model="loginForm.code" style="width:60%" placeholder="请输入验证码" />
+          <!-- 放置一个按钮 -->
           <el-button style="float:right" plain>
             发送验证码
           </el-button>
         </el-form-item>
-        <el-form-item prop="check">
-          <!-- 复选框 -->
-          <el-checkbox v-model="loginForm.check">
-            我已阅读并同意用户协议和隐私条款
+        <!-- 表单域 -->
+        <el-form-item prop="checked">
+          <!-- 是否同意被人家坑 -->
+          <el-checkbox v-model="loginForm.checked">
+            我已阅读同意用户协议和隐私条款
           </el-checkbox>
         </el-form-item>
+        <!-- 按钮 -->
         <el-form-item>
-          <el-button type="primary" style="width:100%" @click="submitLogin">
+          <el-button style="width:100%" type="primary" @click="login">
             登录
           </el-button>
         </el-form-item>
@@ -613,58 +618,71 @@ $ npm i less less-loader # 安装less 和less-loader
 export default {
   data () {
     return {
+      // 登录表单的数据
       loginForm: {
         mobile: '', // 手机号
         code: '', // 验证码
-        check: false // 是否勾选 同意被坑
+        checked: false // 是否同意用户协议
       },
+      // 定义表单的验证规则
       loginRules: {
-        // 验证规则对象 key(字段名):value(规则 => [])
-        mobile: [{ required: true, message: '请输入您的手机号' }, {
-          pattern: /^1[3456789]\d{9}$/, message: '手机号格式不正确'
+        // required 如果为true表示该字段必填
+        mobile: [{ required: true, message: '您的手机号不能为空' }, {
+          pattern: /^1[3-9]\d{9}$/, // 正则表达式
+          message: '您的手机号格式不正确'
         }],
-        code: [{ required: true, message: '请输入你的验证码' }, {
-          pattern: /^\d{6}$/, message: '验证码格式不正确'
+        code: [{ required: true, message: '您的验证码不能为空' }, {
+          pattern: /^\d{6}$/, // 要求6个数字
+          message: '验证码应该是6位数字'
         }],
-        check: [{
+        // 自定义校验  required不能校验true/false
+        checked: [{
           validator (rule, value, callback) {
-          // 自定义校验函数
-          // rule 规则 没啥用
-          // value 要校验的字段的值
-          // callback 是一个回调函数
-            if (value) {
-            // 认为已经勾选
-              callback() // 认为当前的规则校验通过了
-            } else {
-            // 认为没有勾选
-              callback(new Error('您应该同意我们的霸王条款,让我们欺负你')) // 如果没有勾选 认为当前校验失败 应该停止
-            }
+          // rule是当前的校验规则
+          // value是当前的要校验的字段的值
+          // calllback是一个回调函数 不论成功或者失败都要执行
+          // 成功执行callback 失败执行 callback(new Error('错误信息'))
+          // 我们认为 如果 value 为true 就表示 校验成功 如果value 为false就表示校验失败
+            // new Error(错误信息) 就是我们提示的错误信息
+            value ? callback() : callback(new Error('您必须同意我们的霸王条款'))
           }
         }]
-
       }
     }
   },
   methods: {
-    submitLogin () {
-    //  手动校验
-      this.$refs.myForm.validate((isOK) => {
-        if (isOK) {
-          //  说明校验通过  应该调用登录接口
-          // axios  body参数 get参数地址参数 路由参数  查询参数
-          // body参数 axios  data
-          // get参数  axios params
-          this.$axios({
-            url: '/authorizations', // 请求地址 axios 没有指定 类型 默认走get类型
-            method: 'post', // 类型
-            data: this.loginForm // body 参数
-          }).then((result) => {
-            // 只接受正确结果
-            // 前端缓存 登录成功返回给我们的令牌
-            window.localStorage.setItem('user-token', result.data.token)
-            this.$router.push('/home') // 跳转到home页
-          })
-        }
+    login () {
+      //    this.$refs.loginForm 获取的就是el-form的对象实例
+      // 第一种 回调函数 isOK, fields(没有校验通过的字段)
+      // this.$refs.loginForm.validate(function (isOK) {
+      //   if (isOK) {
+      //     console.log('校验通过')
+      //   } else {
+      //     console.log('校验未通过')
+      //   }
+      // }) // 方法
+      // 第二种方式 promise
+      this.$refs.loginForm.validate().then(() => {
+        // 如果成功通过 校验就会到达 then
+        // 通过校验之后 应该做什么事 -> 应该调用登录接口 看看手机号是否正常
+        //   this.$axios.get/post/delete/put
+        this.$axios({
+          url: '/authorizations', // 请求地址
+          data: this.loginForm,
+          // data: { ...this.loginForm, checked: null }, // body请求体参数
+          method: 'post'
+        }).then((result) => {
+          // 成功 之后打印结果
+          // 把钥匙放在兜里 也就是把token存于 本地缓存
+          window.localStorage.setItem('user-token', result.data.token)
+          // 跳转到主页
+          this.$router.push('/home') // push 和 router-link类似 to属性 可以直接是字符串 也可以是对象
+        }).catch(() => {
+          // 提示消息
+          // 第一种用法
+          // this.$message({ message: '用户名或者密码错误', type: 'error' })
+          this.$message.error('用户名或者密码错误')
+        })
       })
     }
   }
@@ -672,25 +690,37 @@ export default {
 </script>
 
 <style lang='less' scoped>
-  .login  {
-    background-image: url('../../assets/img/back.jpg');
-    height: 100vh;
-    background-size: cover;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    .login-card {
-      width: 440px;
-      height: 350px;
-      .title {
-        text-align: center;
-        margin-bottom: 30px;
-        img {
-          height: 45px;
-        }
+// 加了scoped属性 就只会对当前自己的组件起作用
+// 如果需要写less 需要在style标签中 lang='less'
+.login {
+  // background-image: url('../../assets/img/back.jpg');
+  height: 100vh;// 当前屏幕可视区域分成100份
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  &:before {
+     content: '123';
+     width: 100%;
+     height: 100%;
+     position: absolute;
+     background-image: url('../../assets/img/back.jpg');
+     filter: blur(5px);
+      background-size: cover;
+
+  }
+  .login-card {
+    background: rgba(0, 0, 0, 0);
+    z-index: 2;
+    width:440px;
+    height: 340px;
+    .title {
+      text-align: center;
+      img {
+         height: 40px;
       }
     }
   }
+}
 </style>
 
 ```
@@ -723,47 +753,57 @@ axios: {
 
 ```vue
 <template>
+  <!-- 做一个实时的疫情数据 -->
   <el-card>
-    <!-- 卡片组件 -->
-    <!-- 绑定数据 -->
+    <!-- 用来展示数据   id是惟一的 是递归生成的-->
     <el-table :data="list" row-key="id">
-      <el-table-column prop="name" label="地域名称" />
-      <el-table-column label="确认总人数(人)" prop="total.confirm" />
-      <el-table-column label="疑似总人数(人)" prop="total.suspect" />
-      <el-table-column label="死亡总人数(人)" prop="total.dead" />
-      <el-table-column label="康复总人数(人)" prop="total.heal" />
+      <el-table-column prop="name" label="地区名称" />
+      <el-table-column prop="total.confirm" label="确诊总人数(人)" />
+      <el-table-column prop="total.suspect" label="疑似总人数(人)" />
+      <el-table-column prop="total.dead" label="死亡总人数(人)" />
+      <el-table-column prop="total.heal" label="康复总人数(人)" />
     </el-table>
   </el-card>
 </template>
 
 <script>
-// https://view.inews.qq.com/g2/getOnsInfo?name=disease_h5  获取数据的接口
-// jsonp 只在前端用 => 同源策略
+// 将现在的疫情数据显示到表格上
 export default {
-  // 执行asyncData的时候 是在服务端
+//  加数据  我们要做的服务端渲染
+// 此函数会在 后端服务端渲染之前 执行  返回的数据 会和data中的数据进行融合
   async asyncData (context) {
-    //  axios来请求数据
-    // 这里不能用this
+    // 注意 此时 不要用jsonp
+    // 只有前端才会有跨域同源策略问题
+    // 此时此刻在服务端
+    // 如何解决跨域问题 jsonp 利用sciprt标签 可以请求不同端口协议的内容, 回调的形式 执行对应的方法
+    // 设置cors (通过在服务端设置允许访问的 协议端口地址)
+    // 采用反向代理的方式 解决跨域
+    // 服务端是不存在 跨域问题的  先去发起一个请求 => 后台 (允许你访问的后台) => 代替你去访问你要访问的真实后台 => 接口返回给你
+    // spa 项目中  => 代理 要设置在 webpack中, webpack可以当做一个后台(仅仅限于开发期间),因为webpack 是一个开发期间的工具
+    // 你最终的打包的项目要部署到 linux服务器 ,采用ngix 进行web化服务, 上线之后 需要ngix去做你的反向代理, 只需要运维帮你做, 但是你你需要知道
+    // 请求数据
+    const url = 'https://view.inews.qq.com/g2/getOnsInfo?name=disease_h5'
+    // 哪里有axios 我们安装项目是选择的axios 那是前端的对象
+    // context.app  => 指的就是 前端的vue惟一的Vue实例对象
     const { data: { data } } = await context.app.$axios({
-      url: 'https://view.inews.qq.com/g2/getOnsInfo?name=disease_h5' // 实时疫情
+      url
     })
     const result = JSON.parse(data)
-    // 要给所有的数据生成一个唯一键 递归
-    // 递归处理所有的数据 给所有的数据加上一个id  前缀的目的是让每条数据的id都不一样
-    const dealID = function (arr, prefix) {
-      arr.forEach((city, index) => {
-        city.id = prefix + '-' + (index + 1) // 给每个城市赋值一个id
-        if (city.children) {
-          // 如果有children 要给children继续加id
-          // 递归 自身调用自身
-          dealID(city.children, city.id) // 湖北 id 1 =>  1 => 1-1  // 浙江 2  2-1
+    // 如果想要解决重复的问题 可以进行一下递归 递归的目的是 给每一个节点 每一条数据加上一个惟一的id
+    // 递归方法
+    // arr是当前的数组 prefix是当前的前缀
+    const dealId = function (arr, prefix) {
+      arr.forEach((element, index) => {
+        element.id = prefix + '-' + (index + 1) // 所有的地区都是从1 开始
+        if (element.children && element.children.length) {
+          // 此时 表示有子节点
+          dealId(element.children, element.id) // 此时 中国是 1  1-1 1-2  1-1-1
         }
       })
     }
-    dealID(result.areaTree, '') // 递归给所有的数据添加一个1
-    return { list: result.areaTree } // return的数据会和 data的中数据进行融合
+    dealId(result.areaTree, '') // 处理树形数据  第二个参数 是 前缀  树形数据  1-1 1-2 1-3  2-1 2-2 2-3
+    return { list: result.areaTree }
   }
-
 }
 </script>
 
