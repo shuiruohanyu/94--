@@ -19,6 +19,8 @@
 SEO => 搜索引擎优化 => H5页面 => 百度/头条 => 爬虫爬取网页的结构./关键词/语义化标签
 
 > 上述的效果可通过查看 黑马头条的网页元素进行验证
+>
+> ![image-20200402095640332](assets/image-20200402095640332.png)
 
 ## SSR渲染的演示和特点-服务端渲染
 
@@ -26,11 +28,17 @@ SEO => 搜索引擎优化 => H5页面 => 百度/头条 => 爬虫爬取网页的�
 
 **`Server Side Render`** (服务端渲染 **SSR**)：服务器直接**`生成 HTML 文档结构`** 返回给浏览器，但页面交互能力有限。适合于任何后端语言：PHP、Java、Python、Go, ASP 等。aspx => 很多服务器标签
 
+JSP  => 服务端渲染 =>  服务端标签 => 完成数据的替换 => html =>  浏览器
+
+ASP => 服务端渲染 => 服务端标签  => 完成数据的替换 => html =>  浏览器
+
+服务端渲染速度更快, 因为直接返回了文档结构,立刻能看到文档效果
+
 相当于 在服务端完成了页面的结构的生成 => 返回生成好的页面结构 =>不需要js请求完毕就有内容
 
 > 服务端渲染 的优势是什么?
 
-响应速度快(首屏渲染速度快)，有利于 SEO
+响应速度快(首屏渲染速度快)，有利于 SEO, 不需要等待js, 就好像你访问的是静态页面一样
 
 > 劣势 ?
 
@@ -39,6 +47,8 @@ SEO => 搜索引擎优化 => H5页面 => 百度/头条 => 爬虫爬取网页的�
 前后一体 =>  前后分离 => 服务端渲染  =>     中间件(只做服务端渲染)  =>  服务端(主)
 
 >服务端页面返回的内容直接是Html文档结构,不用等到下载完js,再通过js去渲染
+>
+>![image-20200402095657205](assets/image-20200402095657205.png)
 
 ## Vue的SSR介绍及示例演示
 
@@ -99,24 +109,24 @@ $ node app
 >试着写一些动态内容
 
 ```js
-// 第 1 步：创建一个 Vue 实例
-const Vue = require('vue')
+const Vue  = require('vue') //  为什么不能用import  因为这里是后端代码
+const  render  = require('vue-server-renderer')  
+// 服务端渲染包 此模板 可以获取vue实例的html内容
+const SSR = render.createRenderer() // 创建一个 服务端渲染实例化对象  
+// 第一步 创建一个vue实例
 const app = new Vue({
-  template: `<div>Hello World {{ name }}</div>`,
-  data : {
-      name: '张三'
-  }
+    template: `<div>Hello world :{{  name }}</div>`,
+    data: {
+        name: '程序猿'
+    }
 })
+// 第二步 对vue实例进行 渲染 得到其html结构
+SSR.renderToString(app).then(html => {
+    // 得到渲染的结构
+    console.log("得到服务端渲染的结构是:" + html)
+}) // 将组件或者vue实例化 转化成字符串
 
-// 第 2 步：创建一个 renderer
-const renderer = require('vue-server-renderer').createRenderer()
-
-// 第 3 步：将 Vue 实例渲染为 HTML renderToString 返回一个promise
-renderer.renderToString(app).then(html => {
-  console.log(html)
-}).catch(err => {
-  console.error(err)
-})
+// 我们要将这个结果 返回浏览器  浏览器直接显示这个结构  这就是服务端渲染
 ```
 
 ![image-20200213222907433](assets/image-20200213222907433.png)
@@ -136,46 +146,52 @@ $ npm  i express
 首先,将app.js的内容导出
 
 ```js
-// 第 1 步：创建一个 Vue 实例
-const Vue = require('vue')
+const Vue  = require('vue') //  为什么不能用import  因为这里是后端代码
+const  render  = require('vue-server-renderer')  
+// 服务端渲染包 此模板 可以获取vue实例的html内容
+const SSR = render.createRenderer() // 创建一个 服务端渲染实例化对象  
+// 第一步 创建一个vue实例
 const app = new Vue({
-  template: `<div>Hello World {{ name }}</div>`,
-  data : {
-      name: '张三'
-  }
+    template: `<div>Hello world :{{  name }}</div>`,
+    data: {
+        name: '程序猿'
+    }
 })
-
-// 第 2 步：创建一个 renderer
-const renderer = require('vue-server-renderer').createRenderer()
-
-// 第 3 步：将 Vue 实例渲染为 HTML renderToString 返回一个promise
-// renderer.renderToString(app).then(html => {
-//   console.log(html)
-// }).catch(err => {
-//   console.error(err)
-// })
-module.exports = renderer.renderToString(app) // 直接导出一个对象
+// // 第二步 对vue实例进行 渲染 得到其html结构
+// SSR.renderToString(app).then(html => {
+//     // 得到渲染的结构
+//     console.log("得到服务端渲染的结构是:" + html)
+// }) // 将组件或者vue实例化 转化成字符串
+module.exports = SSR.renderToString(app)  // 直接导出 promise对象
+// 我们要将这个结果 返回浏览器  浏览器直接显示这个结构  这就是服务端渲染
 ```
 
 然后,在server.js 中通过express 开启服务端口监视,并将导出的模板字符串 进行返回,代码如下
 
 ```js
-var app = require('express')()
-var Hello = require('./app') // 引入app组件
-app.get('/', function (req, res) {
-    Hello.then(html => {
-        res.send(`
+var server = require('express')()  // 实例化web服务
+var app = require('./app')
+server.get('/', function (request, response) {
+    //  当请求地址是/ 进行处理
+    app.then(html => {
+        response.send(`
         <!DOCTYPE html>
-        <html lang="en">
-          <head><title>Hello</title></head>
-          <body>${html}</body>
-        </html>
-        `)
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大家好,老高的课结束在即</title>
+</head>
+<body>
+     ${html}
+</body>
+</html>`)
+        // 需要把动态渲染的内容直接返回
     })
   
 })
-app.listen(10086, function(){
-    console.log('服务端渲染项目启动,访问地址在 http://localhost:10086/')
+server.listen(10086,function () {
+    console.log("您的web服务启动了,访问地址 http://localhost:10086/")
 })
 ```
 
@@ -216,6 +232,10 @@ OK了, 访问对应的地址 ,通过审查元素,我们发现返回的页面直�
 5. [Vue-Meta](https://github.com/nuxt/vue-meta)
 
 >看到了没? 
+
+vue-cli 是 vuejs 官方的脚手架, 用来开发纯前端项目,不负责服务端渲染
+
+nuxt脚手架 是 第三方团队推出的, 和vue-cli 半毛钱关系没有
 
 Nuxt里面拥有我们开发纯前端项目的一切配置,用于开发完整强大的web应用
 
